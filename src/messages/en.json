@@ -1,0 +1,284 @@
+{
+  "common": {
+    "appName": "AEDHAS",
+    "tagline": "AI-Powered Personality & Entrepreneurial Readiness Assessment",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "back": "Back",
+    "continue": "Continue",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "assessment": "Take Assessment",
+    "astroCareer": "AstroCareer",
+    "history": "My History",
+    "admin": "Admin"
+  },
+  "landing": {
+    "hero": {
+      "title": "Discover Your Entrepreneurial DNA",
+      "subtitle": "AI-powered assessment across 12 scientifically-grounded dimensions. Understand your strengths, growth areas, and career readiness.",
+      "cta": "Start Your Assessment",
+      "secondaryCta": "Explore AstroCareer"
+    },
+    "features": {
+      "dimensions": {
+        "title": "12 Dimensions",
+        "description": "Comprehensive evaluation of personality, cognitive ability, entrepreneurial traits, and interpersonal skills."
+      },
+      "ai": {
+        "title": "AI-Adaptive",
+        "description": "Conversational assessment that adapts to your responses with unique follow-up questions."
+      },
+      "multilingual": {
+        "title": "Multilingual",
+        "description": "Take the assessment in English or Hindi. More languages coming soon."
+      },
+      "antiCheat": {
+        "title": "Integrity Protected",
+        "description": "7-layer anti-cheating system ensures authentic, reliable results."
+      }
+    },
+    "audience": {
+      "title": "Who Is This For?",
+      "students": "Students (15-25) exploring career paths and self-awareness",
+      "founders": "Startup founders evaluating team readiness",
+      "colleges": "Colleges assessing student entrepreneurial potential",
+      "employers": "Employers looking for candidates with the right traits"
+    }
+  },
+  "assessment": {
+    "start": {
+      "title": "Begin Your Assessment",
+      "description": "This assessment takes 15-25 minutes. You'll answer scenario-based questions and share your thoughts in open-ended responses.",
+      "consent": "I understand this assessment evaluates personality traits and I consent to AI analysis of my responses.",
+      "languageNote": "Your assessment language will be locked for this session.",
+      "rules": {
+        "title": "Assessment Guidelines",
+        "noBackNav": "You cannot go back to previous questions",
+        "noTimeLimit": "There are soft time guides but no hard cutoffs",
+        "honest": "There are no right or wrong answers — be authentic",
+        "noCopying": "Copy-paste is disabled during the assessment"
+      },
+      "begin": "Begin Assessment"
+    },
+    "session": {
+      "questionOf": "Question {current} of {total}",
+      "sjtInstruction": "Read the scenario and rank the options from most to least preferred.",
+      "freeTextInstruction": "Share your thoughts in detail. Be specific and authentic.",
+      "timeGuide": "Suggested time: {seconds}s",
+      "submitting": "Submitting...",
+      "generating": "Generating next question..."
+    },
+    "complete": {
+      "title": "Assessment Complete!",
+      "description": "Your responses are being analyzed. Your personalized report will be ready shortly.",
+      "viewReport": "View My Report",
+      "generating": "Generating your report..."
+    }
+  },
+  "report": {
+    "title": "Your Assessment Report",
+    "compositeScore": "Overall Score",
+    "tierLabel": "Your Profile",
+    "dimensions": "Dimension Breakdown",
+    "strengths": "Key Strengths",
+    "growthAreas": "Growth Areas",
+    "careerPaths": "Suggested Career Paths",
+    "commitmentFlag": "Commitment Gap Detected",
+    "commitmentFlagDescription": "Your stated ambitions score high, but behavioral indicators suggest follow-through may be a challenge. This is an area for focused development.",
+    "shareReport": "Share Report",
+    "downloadPdf": "Download PDF",
+    "disclaimer": "This assessment provides insights for self-reflection and development. Results should be considered alongside other factors in career decisions."
+  },
+  "astro": {
+    "title": "AstroCareer",
+    "subtitle": "Explore career paths through the lens of Vedic astrology and numerology.",
+    "disclaimer": "AstroCareer insights are for guidance and self-reflection only. Career success depends on your skills, effort, and choices — not planetary positions.",
+    "quick": {
+      "title": "Quick Analysis",
+      "description": "Enter your name and date of birth for numerology-based career insights.",
+      "nameLabel": "Full Name (in any script)",
+      "dobLabel": "Date of Birth",
+      "analyze": "Analyze"
+    },
+    "full": {
+      "title": "Full Kundli Analysis",
+      "description": "Enter complete birth details for a comprehensive Vedic astrological career analysis.",
+      "birthTimeLabel": "Birth Time",
+      "birthPlaceLabel": "Birth Place",
+      "analyze": "Generate Kundli"
+    },
+    "results": {
+      "destinyNumber": "Destiny Number",
+      "soulNumber": "Soul Number",
+      "personalityNumber": "Personality Number",
+      "sunSign": "Sun Sign",
+      "moonSign": "Moon Sign",
+      "topCareers": "Top Career Paths",
+      "ascendant": "Ascendant (Lagna)",
+      "currentDasha": "Current Dasha Period"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "recentAssessments": "Recent Assessments",
+    "noAssessments": "You haven't taken any assessments yet.",
+    "takeFirst": "Take Your First Assessment",
+    "viewReport": "View Report",
+    "assessmentDate": "Taken on {date}",
+    "score": "Score: {score}",
+    "behavioral": "Behavioral Assessment",
+    "behavioralDesc": "Evaluate your personality, cognitive traits, and entrepreneurial readiness across 12 dimensions.",
+    "domainKnowledge": "Domain Knowledge",
+    "domainDesc": "Test your technical knowledge in your field of study with adaptive questions.",
+    "aiCollaboration": "AI Collaboration",
+    "aiCollabDesc": "Solve a real-world problem by collaborating with an AI assistant. We evaluate how effectively you work with AI.",
+    "astroCareer": "AstroCareer",
+    "astroDesc": "Explore career paths through Vedic astrology and numerology.",
+    "optional": "Optional",
+    "recommended": "Recommended",
+    "preCollegeNote": "Based on your profile, AstroCareer is available for career exploration. Other assessments unlock when you enter college.",
+    "completeOnboarding": "Complete your profile to see available assessments."
+  },
+  "onboarding": {
+    "step1Title": "Basic Information",
+    "step2Title": "Educational Background",
+    "step3Title": "Academic Details",
+    "description": "We need a few details to personalize your experience.",
+    "step2Description": "This helps us show you the right assessment modules.",
+    "step3Description": "Tell us about your academic journey so far.",
+    "nameLabel": "Full Name",
+    "dobLabel": "Date of Birth",
+    "dobHelp": "Your age helps us suggest the right educational stage.",
+    "languageLabel": "Preferred Language",
+    "educationalStageLabel": "Where are you in your education?",
+    "stage": {
+      "PRE_COLLEGE": "Pre-College",
+      "COLLEGE": "Currently in College",
+      "GRADUATE": "Graduated"
+    },
+    "stageDesc": {
+      "PRE_COLLEGE": "Just passed 10th or 12th, exploring career options",
+      "COLLEGE": "Currently pursuing a degree (1st to final year)",
+      "GRADUATE": "Completed degree, looking for opportunities"
+    },
+    "suggested": "Suggested for you",
+    "fieldOfStudyLabel": "Field of Study",
+    "yearOfStudyLabel": "Year of Study",
+    "yearOfGraduationLabel": "Year of Graduation",
+    "backlogCountLabel": "Number of Backlogs",
+    "backlogHelp": "Enter 0 if you have no backlogs. This is confidential.",
+    "employmentStatusLabel": "Current Employment Status",
+    "selectYear": "Select year",
+    "selectField": "Select your field",
+    "selectStatus": "Select status",
+    "yearN": "Year {n}",
+    "employment": {
+      "UNEMPLOYED": "Unemployed / Looking for work",
+      "EMPLOYED": "Currently Employed",
+      "FREELANCE": "Freelance / Self-employed"
+    },
+    "complete": "Complete Setup",
+    "next": "Next",
+    "back": "Back"
+  },
+  "domains": {
+    "computer_science": "Computer Science",
+    "information_technology": "Information Technology",
+    "electronics_communication": "Electronics & Communication",
+    "mechanical_engineering": "Mechanical Engineering",
+    "civil_engineering": "Civil Engineering",
+    "electrical_engineering": "Electrical Engineering",
+    "commerce_accounting": "Commerce & Accounting",
+    "business_management": "Business Management / MBA",
+    "biotechnology": "Biotechnology",
+    "design": "Design (UI/UX, Graphic)",
+    "law": "Law",
+    "media_communication": "Media & Communication",
+    "data_science_ai": "Data Science & AI"
+  },
+  "domainAssessment": {
+    "title": "Domain Knowledge Test",
+    "description": "Test your technical knowledge in your field of study.",
+    "selectDomain": "Select your domain",
+    "startTest": "Begin Domain Test",
+    "questionOf": "Question {current} (Adaptive)",
+    "difficulty": "Difficulty: {level}/5",
+    "aiProbe": "Tell us more about your understanding...",
+    "aiProbeInstruction": "Explain your reasoning in detail.",
+    "submitting": "Checking...",
+    "timeGuide": "Suggested time: {seconds}s",
+    "complete": {
+      "title": "Domain Test Complete!",
+      "description": "Your domain knowledge has been evaluated.",
+      "viewScore": "View Your Score"
+    },
+    "proficiency": {
+      "EXPERT": "Expert",
+      "ADVANCED": "Advanced",
+      "INTERMEDIATE": "Intermediate",
+      "BEGINNER": "Beginner"
+    },
+    "scoreCard": {
+      "title": "Domain Proficiency",
+      "mcqAccuracy": "MCQ Accuracy",
+      "aiProbeScore": "Conceptual Depth",
+      "compositeScore": "Overall Score",
+      "backlogs": "Academic Backlogs"
+    }
+  },
+  "aiCollab": {
+    "title": "AI Collaboration Assessment",
+    "description": "Solve a real-world problem by collaborating with an AI assistant. We evaluate how effectively you work with AI tools.",
+    "startChallenge": "Begin Challenge",
+    "timeRemaining": "Time remaining: {minutes}m",
+    "promptsUsed": "{count} prompts sent",
+    "typePrompt": "Type your prompt to the AI assistant...",
+    "complete": "Mark as Complete",
+    "completeTitle": "Challenge Complete!",
+    "completeDescription": "Your AI collaboration skills are being analyzed.",
+    "viewScore": "View Your Score",
+    "generating": "Analyzing your session...",
+    "dimensions": {
+      "decomposition": "Problem Decomposition",
+      "firstPrinciples": "First-Principles Thinking",
+      "debugging": "Debugging with AI",
+      "communication": "Communication Clarity",
+      "efficiency": "Prompt Efficiency",
+      "quality": "Solution Quality",
+      "iteration": "Iteration & Refinement",
+      "creativity": "Creative Problem Solving"
+    }
+  },
+  "dimensions": {
+    "grit_perseverance": "Grit & Perseverance",
+    "risk_tolerance": "Risk Tolerance",
+    "proactivity": "Proactivity & Initiative",
+    "eq_self_regulation": "EQ & Self-Regulation",
+    "growth_mindset": "Growth Mindset",
+    "integrity": "Integrity & Values",
+    "strategic_thinking": "Strategic Thinking",
+    "collaboration": "Collaboration",
+    "self_efficacy": "Self-Efficacy & Ownership",
+    "innovativeness": "Innovativeness",
+    "action_orientation": "Action Orientation",
+    "physical_mental_vitality": "Physical & Mental Vitality"
+  },
+  "tiers": {
+    "READY_TO_LEAD": "Ready to Lead",
+    "READY_TO_BUILD": "Ready to Build",
+    "READY_TO_CONTRIBUTE": "Ready to Contribute",
+    "GROWING_FOUNDATION": "Growing Foundation"
+  }
+}
