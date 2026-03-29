@@ -196,7 +196,7 @@ CREATE OR REPLACE FUNCTION get_session_question_detail(
   p_session_question_id text,
   p_session_id text
 ) RETURNS TABLE (
-  id text, position integer, type text, question_id text,
+  id text, "position" integer, "type" text, question_id text,
   dim_code text, dim_name text, dim_desc text
 ) LANGUAGE sql STABLE AS $$
   SELECT sq.id, sq.position, sq.type, sq.question_id,
@@ -212,7 +212,7 @@ CREATE OR REPLACE FUNCTION get_next_session_question(
   p_session_id text,
   p_position integer
 ) RETURNS TABLE (
-  sq_id text, type text, position integer, question_id text,
+  sq_id text, "type" text, "position" integer, question_id text,
   dim_name text, dim_desc text
 ) LANGUAGE sql STABLE AS $$
   SELECT sq.id, sq.type, sq.position, sq.question_id,
@@ -228,7 +228,7 @@ CREATE OR REPLACE FUNCTION get_first_session_question(
   p_session_id text,
   p_locale text
 ) RETURNS TABLE (
-  sq_id text, type text, position integer,
+  sq_id text, "type" text, "position" integer,
   scenario text, prompt text, dimension_name text
 ) LANGUAGE sql STABLE AS $$
   SELECT sq.id, sq.type, sq.position,
@@ -246,7 +246,7 @@ CREATE OR REPLACE FUNCTION get_session_question_options(
   p_session_id text,
   p_position integer,
   p_locale text
-) RETURNS TABLE (position integer, text text) LANGUAGE sql STABLE AS $$
+) RETURNS TABLE ("position" integer, "text" text) LANGUAGE sql STABLE AS $$
   SELECT qo.position, qo.text
   FROM question_options qo
   JOIN session_questions sq ON sq.question_id = qo.question_id
@@ -275,7 +275,7 @@ CREATE OR REPLACE FUNCTION get_session_responses(
   p_session_id text
 ) RETURNS TABLE (
   sjt_score real, ai_score real, confidence real, duration_ms integer,
-  type text, dim_id text, dim_code text, dim_name text
+  "type" text, dim_id text, dim_code text, dim_name text
 ) LANGUAGE sql STABLE AS $$
   SELECT r.sjt_score, r.ai_score, r.confidence, r.duration_ms,
          sq.type, d.id, d.code, d.name_key

@@ -2,32 +2,27 @@
 
 ## Context
 
-This guide covers deploying the AEDHAS assessment platform to Vercel with all required services: Supabase PostgreSQL (Mumbai region for DPDP Act compliance), Upstash Redis, Clerk auth, and AI Gateway. The codebase uses Next.js 16 + Supabase JS client.
+Deploy the AEDHAS assessment platform to Vercel via GitHub integration (no CLI required). Services: Supabase PostgreSQL (Mumbai for DPDP Act), Upstash Redis, Clerk auth, and AI Gateway.
 
 ---
 
 ## Prerequisites
 
-Before deploying, ensure you have:
-- Node.js 20+ installed
-- Vercel CLI (`npm i -g vercel@latest`)
 - A GitHub account with access to `amtariksha/internshipsystem`
 - A Vercel account (team: Amtariksha)
+- A Supabase account
 
 ---
 
-## Step 1: Vercel Project Setup
+## Step 1: Vercel Project Setup (Dashboard)
 
-```bash
-# 1. Upgrade Vercel CLI
-npm i -g vercel@latest
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Click **Import Git Repository** → select `amtariksha/internshipsystem`
+3. Framework Preset: **Next.js** (auto-detected)
+4. Root Directory: `.` (default)
+5. Click **Deploy**
 
-# 2. Link repo to Vercel
-cd /mnt/work/projects/amtarikshadev-project4-aedhas
-vercel link
-# → Select "amtariksha" team
-# → Link to existing repo OR create new project named "aedhas"
-```
+The first deploy will fail because env vars are missing — that's expected. Continue to Step 2.
 
 ---
 
@@ -35,18 +30,18 @@ vercel link
 
 ### 2a. Supabase (Database — Mumbai Region)
 
-**Why Supabase over Neon:** Supabase offers a Mumbai (ap-south-1) region, ensuring Indian user data stays in India per the Digital Personal Data Protection (DPDP) Act 2023. Neon does not have Indian infrastructure.
+**Why Supabase:** Mumbai (ap-south-1) region ensures Indian user data stays in India per the DPDP Act 2023.
 
-1. Go to [supabase.com](https://supabase.com) → New Project
-2. **Region: South Asia (Mumbai) — ap-south-1** (critical for DPDP compliance)
+1. Go to [supabase.com](https://supabase.com) → **New Project**
+2. **Region: South Asia (Mumbai) — ap-south-1** (critical for compliance)
 3. Name: `aedhas-prod`
 4. Generate a strong database password → save it
-5. After project creation, go to Settings → API:
-   - Copy **Project URL** → this is `NEXT_PUBLIC_SUPABASE_URL`
-   - Copy **service_role key** (secret) → this is `SUPABASE_SERVICE_ROLE_KEY`
-   - Copy **anon key** → this is `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. After creation, go to **Settings → API** and copy:
+   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
+   - **service_role key** (secret) → `SUPABASE_SERVICE_ROLE_KEY`
+   - **anon key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-Add these as env vars in Vercel Dashboard → Settings → Environment Variables:
+Add these in **Vercel Dashboard → your project → Settings → Environment Variables**:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
@@ -54,77 +49,49 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
 ```
 
 ### 2b. Upstash Redis (Rate Limiting)
-```bash
-vercel integration add upstash
-# → Follow browser prompts
-# → Auto-provisions: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
-```
+
+1. In **Vercel Dashboard → your project → Storage tab**
+2. Click **Create Database** → select **Upstash Redis**
+3. Name: `aedhas-redis`, region closest to Mumbai
+4. Click **Create** — env vars (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) are auto-provisioned
 
 ### 2c. Clerk (Authentication)
-```bash
-vercel integration add clerk
-# ⚠️ Requires manual terms acceptance in terminal
-# → Complete setup in Vercel Dashboard after CLI install
-```
 
-After Clerk setup, manually add these env vars in Vercel Dashboard → Settings → Environment Variables:
+1. In **Vercel Dashboard → your project → Integrations tab**
+2. Click **Browse Marketplace** → search **Clerk** → **Add Integration**
+3. Follow the setup wizard — this auto-provisions `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+
+Then **manually add** these env vars in Vercel Dashboard → Settings → Environment Variables:
 ```
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 ```
 
 **Configure Clerk Webhook:**
-1. Go to Clerk Dashboard → Webhooks → Add Endpoint
+1. Go to [Clerk Dashboard](https://dashboard.clerk.com) → Webhooks → **Add Endpoint**
 2. URL: `https://your-domain.vercel.app/api/webhooks/clerk`
 3. Events: `user.created`, `user.updated`
-4. Copy the signing secret → add as `CLERK_WEBHOOK_SECRET` env var in Vercel
+4. Copy the signing secret → add as `CLERK_WEBHOOK_SECRET` in Vercel env vars
 
 ### 2d. Enable AI Gateway
-1. Go to `https://vercel.com/{team}/aedhas/settings`
-2. Find "AI Gateway" → Enable
-3. This auto-provisions OIDC credentials (no manual API keys needed)
+
+1. Go to **Vercel Dashboard → your project → Settings**
+2. Find **AI Gateway** → **Enable**
+3. OIDC credentials are auto-provisioned (no manual API keys needed)
 
 ---
 
-## Step 3: Pull Environment Variables Locally
+## Step 3: Initialize Database
 
-```bash
-vercel env pull .env.local
-```
+### 3a. Run Schema
 
-Then manually add the Supabase vars to `.env.local` (since Supabase is not via Vercel Marketplace):
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
-```
-
-Verify `.env.local` contains ALL of these:
-```
-NEXT_PUBLIC_SUPABASE_URL=https://...     # Supabase
-SUPABASE_SERVICE_ROLE_KEY=...            # Supabase (server-only)
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...        # Supabase (client)
-UPSTASH_REDIS_REST_URL=https://...       # Upstash
-UPSTASH_REDIS_REST_TOKEN=...             # Upstash
-CLERK_SECRET_KEY=sk_live_...             # Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_... # Clerk
-CLERK_WEBHOOK_SECRET=whsec_...           # Clerk webhook
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-VERCEL_OIDC_TOKEN=...                    # AI Gateway (auto-managed)
-```
-
----
-
-## Step 4: Initialize Database
-
-### 4a. Run Schema
-1. Go to Supabase Dashboard → SQL Editor
+1. Go to **Supabase Dashboard → SQL Editor**
 2. Copy-paste the entire contents of `src/lib/db/schema.sql`
-3. Execute — this creates all 11 tables + indexes + 9 RPC functions + RLS policies
+3. Click **Run** — creates 17 tables + 12 RPC functions + RLS policies
 
-### 4b. Seed Dimensions
-Run this SQL in Supabase SQL Editor to seed the 12 assessment dimensions:
+### 3b. Seed Dimensions
+
+Run this SQL in Supabase SQL Editor:
 
 ```sql
 INSERT INTO dimensions (code, name_key, description, category, max_score, startup_weight, general_weight, sort_order) VALUES
@@ -142,55 +109,49 @@ INSERT INTO dimensions (code, name_key, description, category, max_score, startu
 ('physical_mental_vitality', 'dimensions.physical_mental_vitality', 'Physical and mental energy management', 'PERSONALITY', 5.0, 0.02, 0.03, 12);
 ```
 
-### 4c. Seed SJT Questions
-The question pool needs to be seeded separately. A seed SQL file will be generated with 60+ SJT questions across all 12 dimensions, each with English and Hindi variants + option weights.
+### 3c. Seed Domain Questions
+
+Run `src/lib/db/seed-domain-questions.sql` in Supabase SQL Editor — 60 MCQs across CS, Commerce, and Mechanical Engineering.
+
+### 3d. Seed AI Challenges
+
+Run `src/lib/db/seed-ai-challenges.sql` in Supabase SQL Editor — 8 AI collaboration challenges across domains.
 
 ---
 
-## Step 5: Push to GitHub
+## Step 4: Redeploy
 
-```bash
-git remote add origin https://github.com/amtariksha/internshipsystem.git
-git add -A
-git commit -m "feat: AEDHAS assessment platform MVP"
-git push -u origin main
-```
+After setting all env vars and seeding the database:
 
----
+1. Go to **Vercel Dashboard → your project → Deployments**
+2. Click the **...** menu on the latest deployment → **Redeploy**
+3. Wait for build to complete (should succeed now with all env vars)
 
-## Step 6: Deploy to Vercel
-
-### Option A: Auto-deploy (recommended)
-Once the GitHub repo is linked to Vercel, every push to `main` auto-deploys to production.
-
-### Option B: Manual deploy
-```bash
-# Preview deployment
-vercel deploy
-
-# Production deployment
-vercel deploy --prod
-```
+Every subsequent push to `main` auto-deploys to production.
 
 ---
 
-## Step 7: Post-Deploy Verification
+## Step 5: Post-Deploy Verification
 
-### 7a. Check deployment
-```bash
-vercel inspect <deployment-url>
-vercel logs <deployment-url> --follow
-```
+### 5a. Check deployment
 
-### 7b. Verify each feature
+Go to **Vercel Dashboard → Deployments → click latest** → check:
+- Build logs (should complete without errors)
+- Function logs (click **Logs** tab for runtime errors)
+
+### 5b. Verify each feature
+
 1. **Landing page**: Visit `https://your-domain.vercel.app/en/` — should render hero + features
 2. **Auth flow**: Click Sign Up → create account via Clerk → redirected to onboarding
-3. **Locale switch**: Toggle `/en/` ↔ `/hi/` — UI strings change
-4. **Clerk webhook**: After sign-up, check Supabase Table Editor → `users` table — user should appear
-5. **Assessment start**: Navigate to dashboard → start assessment → first SJT loads
-6. **AI follow-up**: Answer SJT → AI-generated follow-up appears in correct language
-7. **Report**: Complete assessment → report generates with radar chart + tier badges
-8. **AstroCareer**: Try quick numerology with a name + DOB
+3. **Onboarding**: Select educational stage, field of study → saved to Supabase
+4. **Dashboard routing**: PRE_COLLEGE sees AstroCareer only; GRADUATE sees all modules
+5. **Locale switch**: Toggle `/en/` ↔ `/hi/` — UI strings change
+6. **Clerk webhook**: After sign-up, check Supabase Table Editor → `users` table — user should appear
+7. **Domain assessment**: Start domain test → MCQs load at difficulty 3 → adaptive difficulty
+8. **AI collaboration**: Start AI challenge → chat interface loads → send prompts → get AI responses
+9. **Behavioral assessment**: Start assessment → first SJT loads → AI follow-up appears
+10. **Report**: Complete assessment → report generates with radar chart + tier badges + domain scores
+11. **AstroCareer**: Try quick numerology with a name + DOB
 
 ---
 
@@ -198,18 +159,41 @@ vercel logs <deployment-url> --follow
 
 | Variable | Source | Required | Notes |
 |----------|--------|----------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard | Yes | Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard | Yes | Server-only, bypasses RLS |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard | Yes | Client-facing, respects RLS |
-| `UPSTASH_REDIS_REST_URL` | Upstash (Marketplace) | Yes | Redis endpoint |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash (Marketplace) | Yes | Redis auth token |
-| `CLERK_SECRET_KEY` | Clerk (Marketplace) | Yes | Server-only |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk (Marketplace) | Yes | Client-facing |
-| `CLERK_WEBHOOK_SECRET` | Clerk Dashboard | Yes | Webhook signature validation |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API | Yes | Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API | Yes | Server-only, bypasses RLS |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Settings → API | Yes | Client-facing, respects RLS |
+| `UPSTASH_REDIS_REST_URL` | Auto (Vercel Storage) | Yes | Redis endpoint |
+| `UPSTASH_REDIS_REST_TOKEN` | Auto (Vercel Storage) | Yes | Redis auth token |
+| `CLERK_SECRET_KEY` | Auto (Clerk Integration) | Yes | Server-only |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auto (Clerk Integration) | Yes | Client-facing |
+| `CLERK_WEBHOOK_SECRET` | Clerk Dashboard → Webhooks | Yes | Webhook signature validation |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Manual | Yes | Set to `/sign-in` |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Manual | Yes | Set to `/sign-up` |
-| `VERCEL_OIDC_TOKEN` | Auto (AI Gateway) | Yes | Auto-managed by Vercel |
-| `VERCEL_URL` | Auto (Vercel) | — | Auto-set on deploy |
+
+---
+
+## Local Development (Optional)
+
+If you want to run locally, create `.env.local` manually with the same values from Vercel Dashboard:
+
+```bash
+# Copy values from Vercel Dashboard → Settings → Environment Variables
+cat > .env.local << 'EOF'
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-redis-token
+CLERK_SECRET_KEY=sk_live_xxxxx
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxxxx
+CLERK_WEBHOOK_SECRET=whsec_xxxxx
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+EOF
+
+npm install
+npm run dev
+```
 
 ---
 
@@ -222,6 +206,8 @@ The app uses Vercel AI Gateway with OIDC auth (no manual API keys):
 | Follow-up generation | `anthropic/claude-sonnet-4.6` | `openai/gpt-5.4` |
 | Free-text scoring | `anthropic/claude-sonnet-4.6` | `openai/gpt-5.4` |
 | Report narrative | `anthropic/claude-sonnet-4.6` | `openai/gpt-5.4` |
+| AI collaboration assistant | `anthropic/claude-sonnet-4.6` | `openai/gpt-5.4` |
+| Domain probe scoring | `anthropic/claude-sonnet-4.6` | `openai/gpt-5.4` |
 
 Config location: `src/lib/ai/client.ts`
 
@@ -243,13 +229,16 @@ Config location: `src/lib/ai/client.ts`
 Ensure `src/proxy.ts` exists and calls `clerkMiddleware()`. It must be at `src/proxy.ts` (same level as `src/app/`).
 
 ### Supabase connection fails
-Check `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel env vars. The service role key bypasses RLS — never expose it client-side.
+Check `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel env vars (Dashboard → Settings → Environment Variables). The service role key bypasses RLS — never expose it client-side.
 
 ### RPC function not found
-Run `src/lib/db/schema.sql` in Supabase SQL Editor — it creates 9 RPC functions used by API routes. If you see "Could not find the function", the schema wasn't fully applied.
+Run `src/lib/db/schema.sql` in Supabase SQL Editor — it creates 12 RPC functions used by API routes. If you see "Could not find the function", the schema wasn't fully applied.
 
 ### AI Gateway returns 401
-OIDC token may have expired locally. Run `vercel env pull .env.local` to refresh. On Vercel deployments, tokens auto-refresh.
+OIDC is auto-managed on Vercel deployments. If it fails, try redeploying: Vercel Dashboard → Deployments → Redeploy.
+
+### Build fails
+Check build logs in Vercel Dashboard → Deployments → click failed deploy → Build Logs.
 
 ### Python astro functions fail
 Ensure `api/astro/requirements.txt` lists `pyswisseph==2.10.3.2`. Vercel auto-detects Python functions in `api/` directory.
@@ -261,10 +250,15 @@ Ensure `api/astro/requirements.txt` lists `pyswisseph==2.10.3.2`. Vercel auto-de
 ```
 Browser → Vercel Edge → proxy.ts (Clerk auth + i18n)
                       → Next.js App Router
-                          → API Routes (assessment/start, respond, score)
-                              → Supabase PostgreSQL (Mumbai, @supabase/supabase-js)
-                              → AI Gateway (Claude Sonnet 4.6 via OIDC)
-                              → Upstash Redis (rate limiting)
+                          → API Routes
+                              → /api/assessment/* (behavioral SJT + AI follow-ups)
+                              → /api/domain/* (adaptive MCQ + AI probes)
+                              → /api/ai-collab/* (simulated AI chat + scoring)
+                              → /api/onboarding (multi-step onboarding)
+                              → /api/webhooks/clerk (user sync)
+                          → Supabase PostgreSQL (Mumbai, @supabase/supabase-js)
+                          → AI Gateway (Claude Sonnet 4.6 via OIDC)
+                          → Upstash Redis (rate limiting)
                           → Python Functions (api/astro/)
                               → pyswisseph (Vedic calculations)
                           → Server Components (reports, dashboard)
