@@ -286,24 +286,7 @@ CREATE OR REPLACE FUNCTION get_session_responses(
   WHERE r.session_id = p_session_id;
 $$;
 
--- Get report with user name
-CREATE OR REPLACE FUNCTION get_report_by_slug(
-  p_slug text
-) RETURNS TABLE (
-  id text, session_id text, composite_score real,
-  tier_startup text, tier_tech text, tier_consultant text, tier_team text,
-  commitment_flag boolean, narrative jsonb, locale text,
-  slug text, generated_at timestamptz, user_name text
-) LANGUAGE sql STABLE AS $$
-  SELECT r.id, r.session_id, r.composite_score,
-         r.tier_startup, r.tier_tech, r.tier_consultant, r.tier_team,
-         r.commitment_flag, r.narrative, r.locale,
-         r.slug, r.generated_at, u.name
-  FROM reports r
-  JOIN assessment_sessions s ON s.id = r.session_id
-  JOIN users u ON u.id = s.user_id
-  WHERE r.slug = p_slug;
-$$;
+-- get_report_by_slug is defined later with extended columns (domain + AI collab)
 
 -- Get dimension scores for a session
 CREATE OR REPLACE FUNCTION get_dimension_scores(
@@ -576,6 +559,7 @@ CREATE OR REPLACE FUNCTION get_user_profile(
 $$;
 
 -- Get report with user name (extended with domain + AI collab)
+DROP FUNCTION IF EXISTS get_report_by_slug(text);
 CREATE OR REPLACE FUNCTION get_report_by_slug(
   p_slug text
 ) RETURNS TABLE (
