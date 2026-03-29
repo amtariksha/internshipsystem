@@ -623,9 +623,24 @@ ALTER TABLE ai_collab_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_collab_scores ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS automatically.
-CREATE POLICY IF NOT EXISTS "dimensions_read_all" ON dimensions FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "reports_read_by_slug" ON reports FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "domain_questions_read_all" ON domain_questions FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "domain_qv_read_all" ON domain_question_variants FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "domain_qo_read_all" ON domain_question_options FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "ai_challenges_read_all" ON ai_challenges FOR SELECT USING (true);
+-- These policies allow read access for authenticated Supabase users (future use).
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'dimensions_read_all') THEN
+    CREATE POLICY "dimensions_read_all" ON dimensions FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reports_read_by_slug') THEN
+    CREATE POLICY "reports_read_by_slug" ON reports FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'domain_questions_read_all') THEN
+    CREATE POLICY "domain_questions_read_all" ON domain_questions FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'domain_qv_read_all') THEN
+    CREATE POLICY "domain_qv_read_all" ON domain_question_variants FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'domain_qo_read_all') THEN
+    CREATE POLICY "domain_qo_read_all" ON domain_question_options FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'ai_challenges_read_all') THEN
+    CREATE POLICY "ai_challenges_read_all" ON ai_challenges FOR SELECT USING (true);
+  END IF;
+END $$;
