@@ -36,6 +36,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You have an active session", sessionId: existing[0].id }, { status: 409 });
   }
 
+  // P1c: 30-day retake cooldown
+  const { data: lastCompleted } = await sb
+    .from("assessment_sessions")
+    .select("completed_at")
+    .eq("user_id", user.id)
+    .eq("status", "COMPLETED")
+    .order("completed_at", { ascending: false })
+    .limit(1);
+
+  if (lastCompleted && lastCompleted.length > 0) {
+    const lastDate = new Date(lastCompleted[0].completed_at);
+    const cooldownEnd = new Date(lastDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (cooldownEnd > new Date()) {
+      return NextResponse.json({
+        error: "Retake cooldown active. You can retake after 30 days.",
+        retakeAvailableAt: cooldownEnd.toISOString(),
+        lastCompletedAt: lastDate.toISOString(),
+      }, { status: 429 });
+    }
+  }
+
   // Get active questions with variants in the requested locale
   const { data: questionVariants } = await sb
     .from("question_variants")

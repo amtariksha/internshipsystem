@@ -46,7 +46,24 @@ export function assembleSession(
     pool.splice(idx, 1); // Remove from pool so we don't double-pick
   }
 
-  // Phase 2: Fill remaining slots with second questions for high-weight dimensions
+  // Phase 1.5 (Consistency Traps): Ensure at least 2 SJTs per dimension for cross-checking
+  const dimCounts = new Map<string, number>();
+  for (const sjt of selectedSjts) {
+    dimCounts.set(sjt.dimensionId, (dimCounts.get(sjt.dimensionId) ?? 0) + 1);
+  }
+  for (const dimId of dimensionIds) {
+    if ((dimCounts.get(dimId) ?? 0) < 2) {
+      const pool = byDimension.get(dimId) ?? [];
+      if (pool.length > 0) {
+        const idx = Math.floor(rng() * pool.length);
+        selectedSjts.push(pool[idx]);
+        pool.splice(idx, 1);
+        dimCounts.set(dimId, (dimCounts.get(dimId) ?? 0) + 1);
+      }
+    }
+  }
+
+  // Phase 2: Fill remaining slots up to max
   const remaining = ASSESSMENT_CONFIG.MAX_SJT_QUESTIONS - selectedSjts.length;
   const allRemaining: QuestionForAssembly[] = [];
   for (const pool of byDimension.values()) {

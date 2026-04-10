@@ -53,10 +53,20 @@ export function computeDimensionScore(
         ? avgSjtConf
         : avgAiConf;
 
+  // Consistency trap penalty: if multiple SJTs for same dimension differ by >2 points, reduce confidence
+  let adjustedConfidence = confidence;
+  if (sjtScores.length >= 2) {
+    const scores = sjtScores.map((s) => s.score);
+    const maxDiff = Math.max(...scores) - Math.min(...scores);
+    if (maxDiff > 2) {
+      adjustedConfidence = confidence * 0.7; // 30% penalty for inconsistent responses
+    }
+  }
+
   // Normalize from 0-5 scale to 0-100
   const normalized = Math.round((rawScore / 5) * 100);
 
-  return { rawScore, confidence, normalized: Math.min(100, Math.max(0, normalized)) };
+  return { rawScore, confidence: adjustedConfidence, normalized: Math.min(100, Math.max(0, normalized)) };
 }
 
 function average(nums: number[]): number {

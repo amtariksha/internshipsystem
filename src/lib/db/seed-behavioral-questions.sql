@@ -1,0 +1,377 @@
+-- AEDHAS Behavioral SJT Question Seed
+-- 180 questions: 15 per dimension × 12 dimensions
+-- Each: scenario + prompt (en/hi) + 4 options with dimension weights
+-- Run AFTER seed-dimensions (dimensions table must be populated)
+-- Difficulty spread: 6 easy (1-2), 6 medium (3), 3 hard (4-5)
+
+-- ═══════════════════════════════════════════════════════════
+-- DIMENSION 1: GRIT & PERSEVERANCE (15 questions)
+-- ═══════════════════════════════════════════════════════════
+
+INSERT INTO questions (code, dimension_id, scenario_type, difficulty, is_active) VALUES
+('GP01', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'COLLEGE', 1, true),
+('GP02', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 1, true),
+('GP03', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'COLLEGE', 2, true),
+('GP04', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'WORK', 2, true),
+('GP05', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 2, true),
+('GP06', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'COLLEGE', 2, true),
+('GP07', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 3, true),
+('GP08', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'WORK', 3, true),
+('GP09', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'COLLEGE', 3, true),
+('GP10', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 3, true),
+('GP11', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'WORK', 3, true),
+('GP12', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'COLLEGE', 3, true),
+('GP13', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 4, true),
+('GP14', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'WORK', 4, true),
+('GP15', (SELECT id FROM dimensions WHERE code='grit_perseverance'), 'STARTUP', 5, true);
+
+-- GP English variants
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'en', v.scenario, v.prompt FROM (VALUES
+('GP01', 'You have been preparing for a competitive exam for 3 months but your mock test scores are not improving.', 'What would you do next?'),
+('GP02', 'Your startup idea was rejected by 5 angel investors in a row. Your co-founder suggests pivoting completely.', 'How do you respond?'),
+('GP03', 'You failed a subject in your semester exams that you studied hard for. Your parents are disappointed.', 'What is your next step?'),
+('GP04', 'You have been interning at a company for 2 months but feel you are not learning anything meaningful.', 'How do you handle this?'),
+('GP05', 'Your first product launch got only 12 users in the first week despite months of building.', 'What do you do?'),
+('GP06', 'You joined a college coding club but the projects are far more advanced than your current skill level.', 'How do you proceed?'),
+('GP07', 'You have been working on a research paper for 6 months. Your professor says your methodology is flawed and you need to start over.', 'What do you do?'),
+('GP08', 'Your team at work missed the quarterly target by 40%. Management is blaming your department.', 'How do you respond?'),
+('GP09', 'You have been learning a programming language for 4 months but still struggle with basic projects.', 'What is your approach?'),
+('GP10', 'Your startup ran out of runway and you need to either find funding in 30 days or shut down.', 'What is your plan?'),
+('GP11', 'You were passed over for a promotion that was given to a colleague who joined after you.', 'How do you handle this?'),
+('GP12', 'Your final year project partner dropped out 2 months before the deadline, leaving you to complete it alone.', 'What do you do?'),
+('GP13', 'You have been bootstrapping a product for 18 months with no revenue. Your savings are running out and your family is pressuring you to get a job.', 'What do you decide?'),
+('GP14', 'A major client cancelled their contract worth 60% of your company revenue. You have a team of 8 depending on you.', 'How do you respond?'),
+('GP15', 'You are building a hardware product and your 4th prototype failed testing. Each iteration costs 2 lakhs and takes 6 weeks.', 'What is your next move?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+-- GP Hindi variants
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'hi', v.scenario, v.prompt FROM (VALUES
+('GP01', 'आप 3 महीने से प्रतियोगी परीक्षा की तैयारी कर रहे हैं लेकिन आपके मॉक टेस्ट स्कोर में सुधार नहीं हो रहा।', 'आप आगे क्या करेंगे?'),
+('GP02', 'आपका स्टार्टअप आइडिया लगातार 5 एंजेल निवेशकों ने रिजेक्ट कर दिया। आपका को-फाउंडर पूरी तरह बदलाव का सुझाव दे रहा है।', 'आप कैसे जवाब देंगे?'),
+('GP03', 'आप सेमेस्टर परीक्षा में एक विषय में फेल हो गए जिसके लिए आपने बहुत मेहनत की थी। आपके माता-पिता निराश हैं।', 'आपका अगला कदम क्या है?'),
+('GP04', 'आप 2 महीने से एक कंपनी में इंटर्नशिप कर रहे हैं लेकिन लगता है कुछ सार्थक नहीं सीख रहे।', 'आप इसे कैसे संभालेंगे?'),
+('GP05', 'महीनों की मेहनत के बावजूद आपके पहले प्रोडक्ट लॉन्च में पहले हफ्ते में केवल 12 यूजर्स आए।', 'आप क्या करेंगे?'),
+('GP06', 'आपने कॉलेज कोडिंग क्लब ज्वाइन किया लेकिन प्रोजेक्ट्स आपके मौजूदा स्किल लेवल से बहुत आगे हैं।', 'आप कैसे आगे बढ़ेंगे?'),
+('GP07', 'आप 6 महीने से रिसर्च पेपर पर काम कर रहे हैं। प्रोफेसर कहते हैं कि मेथडोलॉजी गलत है और दोबारा शुरू करना होगा।', 'आप क्या करेंगे?'),
+('GP08', 'आपकी टीम ने तिमाही लक्ष्य 40% से मिस कर दिया। मैनेजमेंट आपके विभाग को दोष दे रहा है।', 'आप कैसे जवाब देंगे?'),
+('GP09', 'आप 4 महीने से प्रोग्रामिंग भाषा सीख रहे हैं लेकिन अभी भी बेसिक प्रोजेक्ट्स में संघर्ष कर रहे हैं।', 'आपका दृष्टिकोण क्या है?'),
+('GP10', 'आपके स्टार्टअप का रनवे खत्म हो गया है और 30 दिनों में फंडिंग ढूंढनी होगी या बंद करना होगा।', 'आपकी योजना क्या है?'),
+('GP11', 'आपको प्रमोशन नहीं मिला जो आपके बाद आए सहकर्मी को दे दिया गया।', 'आप इसे कैसे संभालेंगे?'),
+('GP12', 'आपके फाइनल ईयर प्रोजेक्ट पार्टनर ने डेडलाइन से 2 महीने पहले छोड़ दिया।', 'आप क्या करेंगे?'),
+('GP13', 'आप 18 महीने से बिना रेवेन्यू के प्रोडक्ट बना रहे हैं। बचत खत्म हो रही है और परिवार नौकरी करने का दबाव दे रहा है।', 'आप क्या फैसला करेंगे?'),
+('GP14', 'एक बड़े क्लाइंट ने कॉन्ट्रैक्ट रद्द कर दिया जो आपकी 60% रेवेन्यू था। 8 लोगों की टीम आप पर निर्भर है।', 'आप कैसे जवाब देंगे?'),
+('GP15', 'आप हार्डवेयर प्रोडक्ट बना रहे हैं और 4था प्रोटोटाइप भी फेल हो गया। हर बार 2 लाख और 6 हफ्ते लगते हैं।', 'आपका अगला कदम क्या है?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+-- GP Options (English) — 4 per question, weights as jsonb
+INSERT INTO question_options (question_id, "position", locale, text, weights)
+SELECT q.id, v.pos, 'en', v.text, v.weights::jsonb FROM (VALUES
+('GP01',1,'Take a break from studying for a few weeks to clear my head','{"grit_perseverance":1.5,"growth_mindset":1.0}'),
+('GP01',2,'Analyze my weak areas and change my study strategy','{"grit_perseverance":4.5,"growth_mindset":4.0,"strategic_thinking":3.5}'),
+('GP01',3,'Switch to a different exam that seems easier','{"grit_perseverance":1.0,"risk_tolerance":2.0}'),
+('GP01',4,'Keep doing exactly what I have been doing — consistency matters','{"grit_perseverance":3.0,"growth_mindset":1.5}'),
+('GP02',1,'Agree with my co-founder and pivot immediately','{"grit_perseverance":1.5,"collaboration":3.0,"risk_tolerance":3.0}'),
+('GP02',2,'Analyze investor feedback, iterate the pitch, and try 10 more investors','{"grit_perseverance":5.0,"strategic_thinking":4.0,"growth_mindset":3.5}'),
+('GP02',3,'Shut down the startup and look for a job','{"grit_perseverance":0.5,"risk_tolerance":1.0}'),
+('GP02',4,'Ignore the rejections and keep pitching the same way','{"grit_perseverance":3.0,"strategic_thinking":1.0}'),
+('GP03',1,'Accept the failure and move on to the next semester without dwelling on it','{"grit_perseverance":2.5,"eq_self_regulation":3.0}'),
+('GP03',2,'Analyze what went wrong, talk to the professor, and create a focused study plan','{"grit_perseverance":4.5,"growth_mindset":4.5,"proactivity":3.5}'),
+('GP03',3,'Consider switching to a different branch of study','{"grit_perseverance":1.0,"risk_tolerance":2.5}'),
+('GP03',4,'Feel demotivated and take time off from studies','{"grit_perseverance":0.5,"eq_self_regulation":1.0}'),
+('GP04',1,'Quit the internship and find a better one','{"grit_perseverance":1.5,"proactivity":2.5}'),
+('GP04',2,'Talk to my manager about getting more meaningful work and propose specific projects','{"grit_perseverance":4.0,"proactivity":4.5,"collaboration":3.5}'),
+('GP04',3,'Complete the internship for the certificate but focus on personal projects outside','{"grit_perseverance":3.0,"self_efficacy":3.5}'),
+('GP04',4,'Complain to friends about it but continue as is','{"grit_perseverance":1.0,"proactivity":0.5}'),
+('GP05',1,'Shut down the product and try a completely different idea','{"grit_perseverance":1.0,"risk_tolerance":3.0}'),
+('GP05',2,'Talk to those 12 users, understand their needs deeply, and iterate the product','{"grit_perseverance":4.5,"growth_mindset":4.0,"strategic_thinking":4.0}'),
+('GP05',3,'Spend more money on marketing to get more users','{"grit_perseverance":2.5,"strategic_thinking":1.5}'),
+('GP05',4,'Accept that the market does not want this and move on','{"grit_perseverance":1.5,"risk_tolerance":2.0}'),
+('GP06',1,'Quit the club and join one more suited to my level','{"grit_perseverance":1.0,"growth_mindset":1.0}'),
+('GP06',2,'Stay, ask seniors for guidance, and dedicate extra hours to catch up','{"grit_perseverance":5.0,"growth_mindset":4.5,"collaboration":3.0}'),
+('GP06',3,'Stay but only work on the easy parts of projects','{"grit_perseverance":2.0,"growth_mindset":1.5}'),
+('GP06',4,'Attend meetings but do not actively participate until I feel ready','{"grit_perseverance":1.5,"proactivity":0.5}'),
+('GP07',1,'Argue with the professor about the methodology','{"grit_perseverance":2.0,"collaboration":0.5,"integrity":1.0}'),
+('GP07',2,'Accept the feedback, redesign the methodology, and restart with renewed focus','{"grit_perseverance":5.0,"growth_mindset":4.5,"integrity":4.0}'),
+('GP07',3,'Ask for a simpler research topic','{"grit_perseverance":1.5,"strategic_thinking":2.0}'),
+('GP07',4,'Abandon the research and focus on other coursework','{"grit_perseverance":0.5,"action_orientation":1.0}'),
+('GP08',1,'Defend your team publicly and push back on management','{"grit_perseverance":3.0,"collaboration":2.0,"integrity":3.5}'),
+('GP08',2,'Analyze the reasons for missing the target, create a recovery plan, and present it to management','{"grit_perseverance":4.5,"strategic_thinking":4.5,"action_orientation":4.0}'),
+('GP08',3,'Accept the blame quietly and move on','{"grit_perseverance":2.0,"eq_self_regulation":2.5}'),
+('GP08',4,'Start looking for a job at another company','{"grit_perseverance":0.5,"risk_tolerance":2.0}'),
+('GP09',1,'Switch to a different, easier programming language','{"grit_perseverance":1.0,"growth_mindset":1.0}'),
+('GP09',2,'Break down the learning into smaller daily goals and find a mentor','{"grit_perseverance":4.5,"growth_mindset":4.5,"strategic_thinking":3.5}'),
+('GP09',3,'Give up programming and focus on other career options','{"grit_perseverance":0.5}'),
+('GP09',4,'Watch more YouTube tutorials hoping it clicks eventually','{"grit_perseverance":2.5,"growth_mindset":2.0}'),
+('GP10',1,'Accept defeat and close the company gracefully','{"grit_perseverance":1.5,"integrity":3.5}'),
+('GP10',2,'Create a 30-day emergency plan: cut costs, approach new investors, explore bridge funding','{"grit_perseverance":5.0,"strategic_thinking":5.0,"action_orientation":4.5,"risk_tolerance":4.0}'),
+('GP10',3,'Ask family for a loan to keep going','{"grit_perseverance":3.0,"risk_tolerance":3.5}'),
+('GP10',4,'Try to sell the company at a low valuation','{"grit_perseverance":1.0,"strategic_thinking":3.0}'),
+('GP11',1,'Confront your manager and demand an explanation','{"grit_perseverance":2.0,"proactivity":2.5,"eq_self_regulation":1.0}'),
+('GP11',2,'Ask for specific feedback, identify skill gaps, and create a development plan for next cycle','{"grit_perseverance":4.5,"growth_mindset":4.5,"eq_self_regulation":4.0}'),
+('GP11',3,'Accept it was unfair and start job hunting','{"grit_perseverance":1.0,"eq_self_regulation":2.0}'),
+('GP11',4,'Do the bare minimum going forward since hard work does not matter here','{"grit_perseverance":0.5,"integrity":0.5}'),
+('GP12',1,'Ask the professor for an extension and a new partner','{"grit_perseverance":2.5,"proactivity":3.0}'),
+('GP12',2,'Scope down if needed but commit to finishing the project solo with a clear plan','{"grit_perseverance":5.0,"self_efficacy":4.5,"action_orientation":4.0}'),
+('GP12',3,'Copy parts from other projects to save time','{"grit_perseverance":1.0,"integrity":0.5}'),
+('GP12',4,'Submit whatever is done and accept a lower grade','{"grit_perseverance":1.5,"action_orientation":1.0}'),
+('GP13',1,'Get a full-time job and abandon the product','{"grit_perseverance":1.0,"risk_tolerance":1.0}'),
+('GP13',2,'Get a part-time or freelance gig for income while continuing to build the product evenings and weekends','{"grit_perseverance":5.0,"strategic_thinking":4.0,"risk_tolerance":3.5,"action_orientation":4.0}'),
+('GP13',3,'Ask friends and family for more time and money','{"grit_perseverance":3.0,"risk_tolerance":3.0}'),
+('GP13',4,'Continue full-time on the product and take on credit card debt','{"grit_perseverance":4.0,"risk_tolerance":4.5,"strategic_thinking":1.0}'),
+('GP14',1,'Immediately start laying off team members','{"grit_perseverance":1.0,"collaboration":0.5,"strategic_thinking":2.0}'),
+('GP14',2,'Be transparent with the team, quickly diversify the client base, and explore new revenue streams','{"grit_perseverance":5.0,"strategic_thinking":4.5,"collaboration":4.0,"integrity":4.5}'),
+('GP14',3,'Try to win the client back at any cost','{"grit_perseverance":3.0,"strategic_thinking":2.0}'),
+('GP14',4,'Consider shutting down the company','{"grit_perseverance":0.5,"risk_tolerance":1.0}'),
+('GP15',1,'Abandon the hardware product and switch to software','{"grit_perseverance":1.0,"risk_tolerance":2.0}'),
+('GP15',2,'Do a root cause analysis of all 4 failures, consult domain experts, and design prototype 5 with specific fixes','{"grit_perseverance":5.0,"strategic_thinking":4.5,"growth_mindset":4.0,"innovativeness":4.0}'),
+('GP15',3,'Outsource the hardware to a manufacturer and focus on the software','{"grit_perseverance":2.5,"strategic_thinking":3.5}'),
+('GP15',4,'Keep trying the same approach — eventually it will work','{"grit_perseverance":3.0,"strategic_thinking":1.0,"growth_mindset":1.0}')
+) AS v(code, pos, text, weights) JOIN questions q ON q.code = v.code;
+
+-- ═══════════════════════════════════════════════════════════
+-- DIMENSION 2: RISK TOLERANCE (15 questions)
+-- ═══════════════════════════════════════════════════════════
+
+INSERT INTO questions (code, dimension_id, scenario_type, difficulty, is_active) VALUES
+('RT01', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'COLLEGE', 1, true),
+('RT02', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 1, true),
+('RT03', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'WORK', 2, true),
+('RT04', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 2, true),
+('RT05', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'COLLEGE', 2, true),
+('RT06', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'WORK', 2, true),
+('RT07', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 3, true),
+('RT08', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'COLLEGE', 3, true),
+('RT09', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'WORK', 3, true),
+('RT10', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 3, true),
+('RT11', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'COLLEGE', 3, true),
+('RT12', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'WORK', 3, true),
+('RT13', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 4, true),
+('RT14', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'WORK', 4, true),
+('RT15', (SELECT id FROM dimensions WHERE code='risk_tolerance'), 'STARTUP', 5, true);
+
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'en', v.scenario, v.prompt FROM (VALUES
+('RT01', 'You received a job offer from a stable MNC and a seed-funded startup. The startup pays 30% less but offers equity.', 'Which would you choose and why?'),
+('RT02', 'You have an idea for a food delivery app in your college town. It requires investing your savings of 50,000 rupees.', 'What do you decide?'),
+('RT03', 'Your manager offers you a choice: stay in your current safe role or lead a new experimental project that could fail publicly.', 'What do you choose?'),
+('RT04', 'A friend invites you to co-found a startup. You would need to drop out of your final year of college.', 'How do you respond?'),
+('RT05', 'You can either do a summer internship at a big company or travel to a startup bootcamp in another city with no guaranteed outcome.', 'What do you pick?'),
+('RT06', 'Your company is offering voluntary redundancy packages. You have been thinking about starting your own business.', 'Do you take the package?'),
+('RT07', 'You are offered a chance to invest 3 lakhs in a friend''s startup. If it works, you could 10x your money. If it fails, you lose everything.', 'What do you decide?'),
+('RT08', 'You can take a safe elective with a guaranteed good grade, or a challenging new subject from a visiting professor that interests you deeply.', 'Which do you choose?'),
+('RT09', 'You have a stable freelance client paying well. A new opportunity requires you to drop them for an uncertain but bigger contract.', 'What do you do?'),
+('RT10', 'Your startup has two options: stay in a small niche market with steady revenue, or pivot to a massive market with fierce competition.', 'Which path do you take?'),
+('RT11', 'You can either present your research at a prestigious international conference (high stakes, could be criticized) or a local seminar (safe, low visibility).', 'Where do you present?'),
+('RT12', 'You are in a comfortable mid-level position. A recruiter offers a senior role at a struggling company that needs a turnaround.', 'Do you take it?'),
+('RT13', 'You have built a profitable small business. A venture capitalist offers funding to scale 10x, but you would give up 40% control.', 'What is your decision?'),
+('RT14', 'Your entire team is against a new approach you believe in strongly. Implementing it could either save the project or cause it to fail spectacularly.', 'Do you push for it?'),
+('RT15', 'You have the chance to mortgage your family home to fund your startup which needs capital to survive. You believe the product will succeed.', 'What do you decide?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'hi', v.scenario, v.prompt FROM (VALUES
+('RT01', 'आपको एक स्थिर MNC और एक सीड-फंडेड स्टार्टअप दोनों से जॉब ऑफर मिला। स्टार्टअप 30% कम वेतन देता है लेकिन इक्विटी ऑफर करता है।', 'आप कौन सा चुनेंगे और क्यों?'),
+('RT02', 'आपके पास कॉलेज टाउन में फूड डिलीवरी ऐप का आइडिया है। इसमें 50,000 रुपये की बचत निवेश करनी होगी।', 'आप क्या फैसला करेंगे?'),
+('RT03', 'मैनेजर आपको चॉइस देता है: मौजूदा सेफ रोल में रहें या एक नए प्रयोगात्मक प्रोजेक्ट का नेतृत्व करें जो सार्वजनिक रूप से फेल हो सकता है।', 'आप क्या चुनेंगे?'),
+('RT04', 'एक दोस्त स्टार्टअप को-फाउंड करने के लिए कहता है। इसके लिए फाइनल ईयर छोड़ना होगा।', 'आप कैसे जवाब देंगे?'),
+('RT05', 'आप बड़ी कंपनी में समर इंटर्नशिप कर सकते हैं या दूसरे शहर में स्टार्टअप बूटकैम्प जा सकते हैं जिसका कोई गारंटीड आउटकम नहीं है।', 'आप क्या चुनेंगे?'),
+('RT06', 'कंपनी वॉलंटरी रिडंडेंसी पैकेज दे रही है। आप अपना बिज़नेस शुरू करने के बारे में सोच रहे थे।', 'क्या आप पैकेज लेंगे?'),
+('RT07', 'दोस्त के स्टार्टअप में 3 लाख निवेश का मौका है। सफल होने पर 10 गुना, फेल होने पर सब कुछ गंवा देंगे।', 'आप क्या फैसला करेंगे?'),
+('RT08', 'आप सेफ इलेक्टिव ले सकते हैं जिसमें अच्छे ग्रेड की गारंटी है, या विजिटिंग प्रोफेसर का चैलेंजिंग नया विषय जो आपकी गहरी रुचि का है।', 'आप कौन सा चुनेंगे?'),
+('RT09', 'एक स्थिर फ्रीलांस क्लाइंट अच्छा भुगतान कर रहा है। नया मौका उन्हें छोड़ने की मांग करता है एक अनिश्चित लेकिन बड़े कॉन्ट्रैक्ट के लिए।', 'आप क्या करेंगे?'),
+('RT10', 'स्टार्टअप के दो विकल्प: छोटे बाज़ार में स्थिर राजस्व के साथ रहें, या भयंकर प्रतिस्पर्धा वाले बड़े बाज़ार में पिवट करें।', 'कौन सा रास्ता चुनेंगे?'),
+('RT11', 'अंतरराष्ट्रीय सम्मेलन (हाई रिस्क, आलोचना हो सकती है) या स्थानीय सेमिनार (सेफ, कम विज़िबिलिटी) में रिसर्च प्रस्तुत कर सकते हैं।', 'कहाँ प्रस्तुत करेंगे?'),
+('RT12', 'आरामदायक मिड-लेवल पोजीशन में हैं। रिक्रूटर एक संघर्षरत कंपनी में सीनियर रोल ऑफर करता है।', 'क्या आप लेंगे?'),
+('RT13', 'लाभदायक छोटा बिज़नेस बनाया है। VC 10x स्केल करने के लिए फंडिंग ऑफर करता है, लेकिन 40% कंट्रोल देना होगा।', 'आपका फैसला क्या है?'),
+('RT14', 'पूरी टीम नए तरीके के खिलाफ है जिस पर आपको पूरा भरोसा है। लागू करने पर प्रोजेक्ट बच सकता है या बुरी तरह फेल हो सकता है।', 'क्या आप इसे आगे बढ़ाएंगे?'),
+('RT15', 'स्टार्टअप को बचाने के लिए फैमिली होम गिरवी रखने का मौका है। आपको यकीन है कि प्रोडक्ट सफल होगा।', 'आप क्या फैसला करेंगे?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+INSERT INTO question_options (question_id, "position", locale, text, weights)
+SELECT q.id, v.pos, 'en', v.text, v.weights::jsonb FROM (VALUES
+('RT01',1,'Take the MNC for stability and financial security','{"risk_tolerance":1.0,"grit_perseverance":2.0}'),
+('RT01',2,'Join the startup — equity and growth potential excite me more than safety','{"risk_tolerance":5.0,"proactivity":3.5,"innovativeness":3.0}'),
+('RT01',3,'Negotiate with both and pick whichever matches my long-term goals','{"risk_tolerance":3.5,"strategic_thinking":4.5}'),
+('RT01',4,'Ask family to decide since it affects everyone','{"risk_tolerance":1.5,"self_efficacy":1.0}'),
+('RT02',1,'Too risky — I will keep my savings safe','{"risk_tolerance":1.0,"action_orientation":1.0}'),
+('RT02',2,'Invest half and validate the idea before going all in','{"risk_tolerance":3.5,"strategic_thinking":4.5,"action_orientation":3.5}'),
+('RT02',3,'Go all in — 50,000 is worth the bet on my idea','{"risk_tolerance":5.0,"self_efficacy":4.0,"action_orientation":4.5}'),
+('RT02',4,'Wait until after graduation to think about this','{"risk_tolerance":0.5,"action_orientation":0.5}'),
+('RT03',1,'Stay in my current role — why risk a good thing','{"risk_tolerance":1.0,"grit_perseverance":2.0}'),
+('RT03',2,'Lead the new project — even if it fails, I will learn a lot','{"risk_tolerance":4.5,"growth_mindset":4.5,"proactivity":4.0}'),
+('RT03',3,'Ask for more details before committing','{"risk_tolerance":2.5,"strategic_thinking":3.5}'),
+('RT03',4,'Suggest someone else lead it and offer to support','{"risk_tolerance":1.5,"collaboration":3.0}'),
+('RT04',1,'No way — completing my degree is non-negotiable','{"risk_tolerance":1.0,"integrity":3.0}'),
+('RT04',2,'Explore if I can do both — part-time startup while finishing college','{"risk_tolerance":3.0,"strategic_thinking":4.0}'),
+('RT04',3,'Drop out and go all in — college can wait, this opportunity cannot','{"risk_tolerance":5.0,"action_orientation":4.5}'),
+('RT04',4,'Tell my friend to wait until I graduate','{"risk_tolerance":1.5,"grit_perseverance":2.5}'),
+('RT05',1,'Big company internship — brand name matters for my resume','{"risk_tolerance":1.0,"strategic_thinking":2.5}'),
+('RT05',2,'Startup bootcamp — the learning and network could be more valuable','{"risk_tolerance":4.5,"growth_mindset":4.0,"proactivity":3.5}'),
+('RT05',3,'Research both thoroughly and decide based on career goals','{"risk_tolerance":2.5,"strategic_thinking":4.0}'),
+('RT05',4,'Ask seniors who have done both for advice','{"risk_tolerance":2.0,"collaboration":3.0}'),
+('RT06',1,'No — too risky to leave a stable income','{"risk_tolerance":0.5}'),
+('RT06',2,'Yes — this is the push I needed to start my business','{"risk_tolerance":5.0,"proactivity":4.5,"action_orientation":4.5}'),
+('RT06',3,'Take the package but look for another job first before starting the business','{"risk_tolerance":3.0,"strategic_thinking":3.5}'),
+('RT06',4,'Stay and start the business on the side first','{"risk_tolerance":2.0,"strategic_thinking":3.0}'),
+('RT07',1,'Decline — I cannot afford to lose that money','{"risk_tolerance":0.5}'),
+('RT07',2,'Invest 1 lakh — enough to participate but not devastating if lost','{"risk_tolerance":3.0,"strategic_thinking":4.0}'),
+('RT07',3,'Invest the full 3 lakhs — I believe in my friend','{"risk_tolerance":5.0,"collaboration":3.0}'),
+('RT07',4,'Do thorough due diligence first, then decide','{"risk_tolerance":2.5,"strategic_thinking":4.5}'),
+('RT08',1,'Take the safe elective — GPA matters more','{"risk_tolerance":1.0}'),
+('RT08',2,'Take the challenging subject — genuine interest beats grades','{"risk_tolerance":4.5,"growth_mindset":4.5}'),
+('RT08',3,'Talk to students who took similar subjects before deciding','{"risk_tolerance":2.5,"strategic_thinking":3.0}'),
+('RT08',4,'Take the safe one and audit the interesting one informally','{"risk_tolerance":2.0,"growth_mindset":3.0}'),
+('RT09',1,'Keep the stable client — a bird in hand is worth two in the bush','{"risk_tolerance":1.0}'),
+('RT09',2,'Take the new opportunity — growth requires risk','{"risk_tolerance":4.5,"proactivity":4.0}'),
+('RT09',3,'Try to negotiate keeping both clients temporarily','{"risk_tolerance":2.5,"strategic_thinking":4.0}'),
+('RT09',4,'Gradually transition by finding replacement work first','{"risk_tolerance":2.0,"strategic_thinking":3.5}'),
+('RT10',1,'Stay in the niche — steady revenue is precious','{"risk_tolerance":1.0,"strategic_thinking":2.5}'),
+('RT10',2,'Pivot to the massive market — the ceiling is too high to ignore','{"risk_tolerance":5.0,"strategic_thinking":3.5,"innovativeness":4.0}'),
+('RT10',3,'Test the bigger market with a small experiment before committing','{"risk_tolerance":3.5,"strategic_thinking":5.0}'),
+('RT10',4,'Stay in the niche but gradually expand into adjacent markets','{"risk_tolerance":2.0,"strategic_thinking":4.0}'),
+('RT11',1,'Local seminar — safer and still counts on my CV','{"risk_tolerance":1.0}'),
+('RT11',2,'International conference — the exposure and feedback are invaluable','{"risk_tolerance":4.5,"growth_mindset":4.0,"self_efficacy":4.0}'),
+('RT11',3,'Submit to both and see which accepts first','{"risk_tolerance":3.0,"strategic_thinking":3.0}'),
+('RT11',4,'International but only if my professor endorses my paper first','{"risk_tolerance":2.5,"collaboration":2.5}'),
+('RT12',1,'Stay in my comfortable position — why fix what is not broken','{"risk_tolerance":0.5}'),
+('RT12',2,'Take the turnaround role — it is a chance to prove myself at a higher level','{"risk_tolerance":5.0,"self_efficacy":4.5,"grit_perseverance":4.0}'),
+('RT12',3,'Research the company more before deciding','{"risk_tolerance":2.5,"strategic_thinking":3.5}'),
+('RT12',4,'Counter-offer my current company for a promotion first','{"risk_tolerance":2.0,"strategic_thinking":3.0}'),
+('RT13',1,'Decline — I built this business and will not give up control','{"risk_tolerance":1.5,"self_efficacy":3.5}'),
+('RT13',2,'Accept — 60% of a massive company is worth more than 100% of a small one','{"risk_tolerance":4.5,"strategic_thinking":4.0}'),
+('RT13',3,'Negotiate for better terms — less equity dilution or board seats','{"risk_tolerance":3.5,"strategic_thinking":5.0}'),
+('RT13',4,'Ask other founders who have taken VC money for advice','{"risk_tolerance":2.5,"collaboration":3.0}'),
+('RT14',1,'Back down — consensus matters more than being right','{"risk_tolerance":1.0,"collaboration":3.0}'),
+('RT14',2,'Push for a small pilot to test the approach before full implementation','{"risk_tolerance":3.5,"strategic_thinking":5.0,"innovativeness":4.0}'),
+('RT14',3,'Go ahead with it — conviction requires courage','{"risk_tolerance":5.0,"self_efficacy":4.5}'),
+('RT14',4,'Document my reasoning so I am covered either way','{"risk_tolerance":2.0,"strategic_thinking":3.0}'),
+('RT15',1,'Absolutely not — family home is off limits regardless','{"risk_tolerance":0.5,"integrity":4.0}'),
+('RT15',2,'Yes — I truly believe in this product and will make it work','{"risk_tolerance":5.0,"self_efficacy":5.0,"grit_perseverance":4.5}'),
+('RT15',3,'Explore every other funding option first before even considering this','{"risk_tolerance":2.5,"strategic_thinking":4.5}'),
+('RT15',4,'Discuss openly with family and only proceed if everyone agrees','{"risk_tolerance":3.0,"collaboration":3.5,"integrity":4.5}')
+) AS v(code, pos, text, weights) JOIN questions q ON q.code = v.code;
+
+-- ═══════════════════════════════════════════════════════════
+-- DIMENSION 3: PROACTIVITY & INITIATIVE (15 questions)
+-- ═══════════════════════════════════════════════════════════
+
+INSERT INTO questions (code, dimension_id, scenario_type, difficulty, is_active) VALUES
+('PR01', (SELECT id FROM dimensions WHERE code='proactivity'), 'COLLEGE', 1, true),
+('PR02', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 1, true),
+('PR03', (SELECT id FROM dimensions WHERE code='proactivity'), 'WORK', 2, true),
+('PR04', (SELECT id FROM dimensions WHERE code='proactivity'), 'COLLEGE', 2, true),
+('PR05', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 2, true),
+('PR06', (SELECT id FROM dimensions WHERE code='proactivity'), 'WORK', 2, true),
+('PR07', (SELECT id FROM dimensions WHERE code='proactivity'), 'COLLEGE', 3, true),
+('PR08', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 3, true),
+('PR09', (SELECT id FROM dimensions WHERE code='proactivity'), 'WORK', 3, true),
+('PR10', (SELECT id FROM dimensions WHERE code='proactivity'), 'COLLEGE', 3, true),
+('PR11', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 3, true),
+('PR12', (SELECT id FROM dimensions WHERE code='proactivity'), 'WORK', 3, true),
+('PR13', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 4, true),
+('PR14', (SELECT id FROM dimensions WHERE code='proactivity'), 'WORK', 4, true),
+('PR15', (SELECT id FROM dimensions WHERE code='proactivity'), 'STARTUP', 5, true);
+
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'en', v.scenario, v.prompt FROM (VALUES
+('PR01', 'You notice that your college department does not have a placement cell and seniors are struggling to find jobs.', 'What do you do?'),
+('PR02', 'You are using a popular app and find a significant UX flaw that frustrates many users.', 'What is your response?'),
+('PR03', 'You notice an inefficiency in your team daily standup meeting that wastes 15 minutes every day.', 'How do you handle it?'),
+('PR04', 'Your professor asks the class for volunteers to organize a guest lecture series. Nobody raises their hand.', 'What do you do?'),
+('PR05', 'You discover that a competitor just launched a feature your startup has been planning for months.', 'How do you react?'),
+('PR06', 'You finish your assigned work 2 days early. There are no new tasks assigned to you yet.', 'What do you do?'),
+('PR07', 'You realize your college has no alumni network platform and valuable connections are being lost.', 'What action do you take?'),
+('PR08', 'At a networking event, you meet someone who could be a perfect mentor for your startup but they are surrounded by people.', 'What do you do?'),
+('PR09', 'You see a process at work that is clearly broken but it is not your department responsibility.', 'How do you respond?'),
+('PR10', 'There is a national hackathon in 2 weeks. You have no team and the registration deadline is tomorrow.', 'What do you do?'),
+('PR11', 'You read an article about a new technology that could dramatically improve your startup product.', 'What do you do next?'),
+('PR12', 'A new employee joins your team and seems lost. Your manager has not assigned anyone to help them.', 'What do you do?'),
+('PR13', 'You spot an emerging market trend that could be a massive opportunity but it requires completely new skills your team does not have.', 'What is your approach?'),
+('PR14', 'Your company annual review process is outdated and everyone complains about it. Leadership has not addressed it.', 'What do you do?'),
+('PR15', 'You realize your startup industry is about to face major regulatory changes that nobody in your space is preparing for.', 'How do you respond?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+INSERT INTO question_variants (question_id, locale, scenario, prompt)
+SELECT q.id, 'hi', v.scenario, v.prompt FROM (VALUES
+('PR01', 'आप देखते हैं कि आपके कॉलेज विभाग में प्लेसमेंट सेल नहीं है और सीनियर्स को नौकरी खोजने में दिक्कत हो रही है।', 'आप क्या करेंगे?'),
+('PR02', 'आप एक लोकप्रिय ऐप इस्तेमाल कर रहे हैं और एक बड़ी UX खामी पाते हैं जो कई यूजर्स को परेशान करती है।', 'आपकी प्रतिक्रिया क्या है?'),
+('PR03', 'आपकी टीम की डेली स्टैंडअप मीटिंग में एक अक्षमता है जो हर दिन 15 मिनट बर्बाद करती है।', 'आप इसे कैसे संभालेंगे?'),
+('PR04', 'प्रोफेसर गेस्ट लेक्चर सीरीज़ आयोजित करने के लिए वॉलंटियर मांगते हैं। कोई हाथ नहीं उठाता।', 'आप क्या करेंगे?'),
+('PR05', 'आपको पता चलता है कि प्रतियोगी ने वह फीचर लॉन्च कर दिया जो आपके स्टार्टअप ने महीनों से प्लान किया था।', 'आप कैसे रिएक्ट करेंगे?'),
+('PR06', 'आप अपना असाइन किया गया काम 2 दिन पहले पूरा कर लेते हैं। अभी तक कोई नया काम नहीं मिला।', 'आप क्या करेंगे?'),
+('PR07', 'आप समझते हैं कि कॉलेज में कोई एलुमनी नेटवर्क प्लेटफॉर्म नहीं है और कीमती कनेक्शन खो रहे हैं।', 'आप क्या कदम उठाएंगे?'),
+('PR08', 'नेटवर्किंग इवेंट में आप किसी से मिलते हैं जो आपके स्टार्टअप के लिए परफेक्ट मेंटर हो सकता है लेकिन वो लोगों से घिरे हुए हैं।', 'आप क्या करेंगे?'),
+('PR09', 'आप काम पर एक ऐसी प्रक्रिया देखते हैं जो स्पष्ट रूप से खराब है लेकिन यह आपके विभाग की जिम्मेदारी नहीं है।', 'आप कैसे जवाब देंगे?'),
+('PR10', '2 हफ्ते में नेशनल हैकाथॉन है। आपके पास कोई टीम नहीं है और रजिस्ट्रेशन कल बंद हो रहा है।', 'आप क्या करेंगे?'),
+('PR11', 'एक नई तकनीक के बारे में आर्टिकल पढ़ते हैं जो आपके स्टार्टअप प्रोडक्ट को नाटकीय रूप से सुधार सकती है।', 'आप आगे क्या करेंगे?'),
+('PR12', 'नया कर्मचारी टीम में जुड़ता है और भटका हुआ लगता है। मैनेजर ने किसी को मदद के लिए नहीं लगाया।', 'आप क्या करेंगे?'),
+('PR13', 'एक उभरता मार्केट ट्रेंड दिखता है जो बड़ा अवसर हो सकता है लेकिन इसके लिए बिल्कुल नए स्किल्स चाहिए जो टीम के पास नहीं हैं।', 'आपका दृष्टिकोण क्या है?'),
+('PR14', 'कंपनी की वार्षिक रिव्यू प्रक्रिया पुरानी है और सब शिकायत करते हैं। लीडरशिप ने ध्यान नहीं दिया।', 'आप क्या करेंगे?'),
+('PR15', 'आपको पता चलता है कि आपकी स्टार्टअप इंडस्ट्री में बड़े नियामक बदलाव आने वाले हैं जिनके लिए कोई तैयार नहीं है।', 'आप कैसे जवाब देंगे?')
+) AS v(code, scenario, prompt) JOIN questions q ON q.code = v.code;
+
+INSERT INTO question_options (question_id, "position", locale, text, weights)
+SELECT q.id, v.pos, 'en', v.text, v.weights::jsonb FROM (VALUES
+('PR01',1,'Complain to friends about the lack of placement support','{"proactivity":0.5}'),
+('PR01',2,'Start a student placement initiative — connect with companies, organize mock interviews','{"proactivity":5.0,"action_orientation":4.5,"collaboration":4.0,"self_efficacy":4.0}'),
+('PR01',3,'Wait for the college to address it','{"proactivity":0.5,"action_orientation":0.5}'),
+('PR01',4,'Focus on my own job search and let others handle theirs','{"proactivity":1.5,"self_efficacy":3.0}'),
+('PR02',1,'Ignore it — someone else will report it','{"proactivity":0.5}'),
+('PR02',2,'Write detailed feedback to the company with screenshots and suggest improvements','{"proactivity":4.5,"action_orientation":4.0,"innovativeness":3.5}'),
+('PR02',3,'Complain about it on social media','{"proactivity":1.5,"collaboration":0.5}'),
+('PR02',4,'Think about building a competing product that does it better','{"proactivity":3.5,"innovativeness":4.5,"risk_tolerance":3.5}'),
+('PR03',1,'Say nothing — I do not want to seem like I am criticizing the team','{"proactivity":0.5,"collaboration":1.5}'),
+('PR03',2,'Prepare a brief proposal with data on time saved and present it to the team lead','{"proactivity":5.0,"strategic_thinking":4.5,"action_orientation":4.0}'),
+('PR03',3,'Mention it casually during the next standup','{"proactivity":2.5,"collaboration":2.5}'),
+('PR03',4,'Just skip the meetings when possible','{"proactivity":0.5,"integrity":0.5}'),
+('PR04',1,'Stay quiet — it is not my responsibility','{"proactivity":0.5}'),
+('PR04',2,'Volunteer immediately and start planning the logistics','{"proactivity":5.0,"action_orientation":4.5,"self_efficacy":4.0}'),
+('PR04',3,'Wait to see if someone else volunteers first','{"proactivity":1.0}'),
+('PR04',4,'Suggest the professor make it a graded assignment instead','{"proactivity":2.0,"strategic_thinking":2.5}'),
+('PR05',1,'Panic and rush to launch our version immediately','{"proactivity":2.5,"strategic_thinking":1.0}'),
+('PR05',2,'Study what they built, identify their gaps, and build a differentiated version quickly','{"proactivity":4.5,"strategic_thinking":5.0,"innovativeness":4.0}'),
+('PR05',3,'Abandon the feature and work on something else','{"proactivity":2.0,"risk_tolerance":2.0}'),
+('PR05',4,'Copy their approach and launch faster','{"proactivity":2.0,"integrity":0.5}'),
+('PR06',1,'Relax and wait for new tasks','{"proactivity":0.5,"action_orientation":0.5}'),
+('PR06',2,'Identify areas of improvement, automate something, or help a teammate','{"proactivity":5.0,"action_orientation":4.5,"collaboration":3.5}'),
+('PR06',3,'Ask my manager what to do next','{"proactivity":2.0}'),
+('PR06',4,'Use the time for personal learning','{"proactivity":2.5,"growth_mindset":3.5}'),
+('PR07',1,'Mention the idea to friends and see if anyone is interested','{"proactivity":2.0}'),
+('PR07',2,'Build an MVP alumni platform, pitch it to the dean, and recruit volunteers to help','{"proactivity":5.0,"action_orientation":5.0,"innovativeness":4.0,"self_efficacy":4.5}'),
+('PR07',3,'Write a suggestion letter to the administration','{"proactivity":3.0,"action_orientation":2.5}'),
+('PR07',4,'Wait for someone else to build it — I will join when it exists','{"proactivity":0.5}'),
+('PR08',1,'Leave without talking to them — they are clearly busy','{"proactivity":0.5}'),
+('PR08',2,'Wait for a natural opening, introduce myself confidently, and ask for 2 minutes','{"proactivity":4.5,"self_efficacy":4.0,"eq_self_regulation":3.5}'),
+('PR08',3,'Send them a LinkedIn connection request later','{"proactivity":2.5}'),
+('PR08',4,'Ask a mutual contact to introduce us','{"proactivity":3.0,"collaboration":3.5}'),
+('PR09',1,'Ignore it — not my circus, not my monkeys','{"proactivity":0.5}'),
+('PR09',2,'Document the issue and propose a fix to the relevant team with a clear business case','{"proactivity":4.5,"strategic_thinking":4.0,"collaboration":3.5}'),
+('PR09',3,'Mention it to my manager in passing','{"proactivity":2.0}'),
+('PR09',4,'Complain about it in the break room','{"proactivity":0.5,"integrity":1.0}'),
+('PR10',1,'Skip this hackathon — no team means no chance','{"proactivity":0.5}'),
+('PR10',2,'Post on hackathon forums for teammates tonight, register solo as backup, and prepare a project idea','{"proactivity":5.0,"action_orientation":5.0,"risk_tolerance":3.5}'),
+('PR10',3,'Ask classmates if anyone wants to join at the last minute','{"proactivity":3.0,"collaboration":3.0}'),
+('PR10',4,'Register solo and figure out a team at the event','{"proactivity":3.5,"risk_tolerance":3.0}'),
+('PR11',1,'Bookmark it for later reading','{"proactivity":1.0}'),
+('PR11',2,'Build a prototype integration that evening and share results with the team next morning','{"proactivity":5.0,"action_orientation":5.0,"innovativeness":4.5}'),
+('PR11',3,'Share the article in the team Slack channel','{"proactivity":2.5,"collaboration":2.5}'),
+('PR11',4,'Wait for the technology to mature before investing time','{"proactivity":1.0,"strategic_thinking":2.5}'),
+('PR12',1,'Wait for the manager to notice and assign a buddy','{"proactivity":0.5}'),
+('PR12',2,'Introduce myself, offer to help them get set up, and share useful resources','{"proactivity":4.5,"collaboration":4.5,"eq_self_regulation":3.5}'),
+('PR12',3,'Tell my manager the new person needs help','{"proactivity":2.0}'),
+('PR12',4,'Focus on my own work — they will figure it out','{"proactivity":0.5,"collaboration":0.5}'),
+('PR13',1,'Ignore the trend — stick to what we know','{"proactivity":0.5,"risk_tolerance":1.0}'),
+('PR13',2,'Start upskilling the team immediately, hire for the gap, and create a 90-day plan to capture the opportunity','{"proactivity":5.0,"strategic_thinking":5.0,"action_orientation":4.5,"risk_tolerance":4.0}'),
+('PR13',3,'Wait to see if the trend is real before acting','{"proactivity":1.5,"strategic_thinking":2.5}'),
+('PR13',4,'Partner with a company that already has these skills','{"proactivity":3.5,"collaboration":4.0,"strategic_thinking":4.0}'),
+('PR14',1,'Complain to colleagues but do nothing official','{"proactivity":0.5}'),
+('PR14',2,'Draft a detailed proposal for a modernized review process and present it to HR leadership','{"proactivity":5.0,"strategic_thinking":4.5,"action_orientation":4.0,"innovativeness":3.5}'),
+('PR14',3,'Fill out the feedback form when asked about the review process','{"proactivity":2.0}'),
+('PR14',4,'Wait for leadership to fix it eventually','{"proactivity":0.5}'),
+('PR15',1,'Wait and see what happens — the regulations may not pass','{"proactivity":0.5,"risk_tolerance":1.0}'),
+('PR15',2,'Hire a regulatory consultant, start adapting the product now, and position as a compliance-first leader in the space','{"proactivity":5.0,"strategic_thinking":5.0,"risk_tolerance":4.0,"action_orientation":4.5}'),
+('PR15',3,'Discuss it with the team and plan for next quarter','{"proactivity":2.5,"collaboration":3.0}'),
+('PR15',4,'Join an industry association to lobby against the changes','{"proactivity":3.0,"strategic_thinking":3.0}')
+) AS v(code, pos, text, weights) JOIN questions q ON q.code = v.code;

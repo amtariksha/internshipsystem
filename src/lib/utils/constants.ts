@@ -7,6 +7,10 @@ export const DIMENSIONS = [
     generalWeight: 0.10,
     description: "Grit & Perseverance (Consistency of Interest + Perseverance of Effort)",
     sortOrder: 1,
+    subScores: [
+      { code: "grit_consistency", label: "Consistency of Interest", weightKey: "grit_consistency" },
+      { code: "grit_effort", label: "Perseverance of Effort", weightKey: "grit_effort" },
+    ],
   },
   {
     code: "risk_tolerance",

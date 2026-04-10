@@ -44,6 +44,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Active domain session exists", sessionId: existing[0].id }, { status: 409 });
   }
 
+  // 30-day retake cooldown for domain assessments
+  const { data: lastDomain } = await sb
+    .from("domain_sessions")
+    .select("completed_at")
+    .eq("user_id", user.id)
+    .eq("domain", domain)
+    .eq("status", "COMPLETED")
+    .order("completed_at", { ascending: false })
+    .limit(1);
+
+  if (lastDomain && lastDomain.length > 0) {
+    const lastDate = new Date(lastDomain[0].completed_at);
+    const cooldownEnd = new Date(lastDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (cooldownEnd > new Date()) {
+      return NextResponse.json({
+        error: "Retake cooldown active for this domain.",
+        retakeAvailableAt: cooldownEnd.toISOString(),
+      }, { status: 429 });
+    }
+  }
+
   // Get first question at starting difficulty
   const { data: questions } = await sb.rpc("get_domain_questions_by_difficulty", {
     p_domain: domain,

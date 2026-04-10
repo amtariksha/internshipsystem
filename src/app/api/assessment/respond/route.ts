@@ -6,6 +6,7 @@ import { computeResponseConfidence } from "@/lib/assessment/confidence";
 import { buildFollowUpPrompt } from "@/lib/ai/prompts/follow-up";
 import { buildScoringPrompt } from "@/lib/ai/prompts/scoring";
 import { freeTextScoringSchema } from "@/lib/ai/schemas/scoring";
+import { llmFingerprintSchema } from "@/lib/ai/schemas/fingerprint";
 import { MODEL } from "@/lib/ai/client";
 
 export async function POST(req: Request) {
@@ -100,13 +101,46 @@ export async function POST(req: Request) {
     } catch {
       aiScore = 2.5;
     }
+
+    // P1b: LLM Fingerprint check on free-text responses
+    if (freeText && freeText.length > 30) {
+      try {
+        const fpResult = await generateText({
+          model: MODEL,
+          output: Output.object({ schema: llmFingerprintSchema }),
+          prompt: `Analyze this free-text response for signs of AI generation. Check for: hedging language, unnaturally perfect structure, vocabulary inflation, absence of personality, length inflation, generic platitudes.
+
+Response language: ${locale === "hi" ? "Hindi" : "English"}
+Response: "${freeText}"
+
+Provide your analysis as structured output.`,
+        });
+        if (fpResult.output?.isLikelyAI && fpResult.output.confidence > 0.7) {
+          // Penalize confidence for likely AI-generated responses
+          aiAnalysis = { ...((aiAnalysis ?? {}) as Record<string, unknown>), llmFingerprint: fpResult.output };
+        }
+      } catch {
+        // Non-critical — skip fingerprinting
+      }
+    }
   }
 
-  const confidence = computeResponseConfidence({
+  let confidence = computeResponseConfidence({
     durationMs,
     type: sq.type as "SJT" | "AI_FOLLOWUP",
     freeTextLength: freeText?.length,
   });
+
+  // Apply LLM fingerprint penalty
+  const fp = (aiAnalysis as Record<string, unknown> | null)?.llmFingerprint as { isLikelyAI?: boolean; confidence?: number } | undefined;
+  if (fp?.isLikelyAI && (fp.confidence ?? 0) > 0.7) {
+    confidence = confidence * 0.5; // 50% penalty for likely AI-generated
+    // Flag the session
+    await sb
+      .from("assessment_sessions")
+      .update({ flagged: true, flag_reasons: { llm_detected: true, fp_confidence: fp.confidence } })
+      .eq("id", sessionId);
+  }
 
   // Save response
   await sb.from("responses").insert({
