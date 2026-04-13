@@ -21,13 +21,13 @@ export function Navbar() {
           {isSignedIn && (
             <div className="hidden items-center gap-4 md:flex">
               <Link
-                href="/dashboard"
+                href="/"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t("dashboard")}
               </Link>
               <Link
-                href="/assessment/start"
+                href="/start"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t("assessment")}

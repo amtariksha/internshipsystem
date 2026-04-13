@@ -82,7 +82,7 @@ export default function AssessmentSessionPage() {
         const data = await res.json();
 
         if (data.complete) {
-          router.push(`/assessment/complete/${sessionId}`);
+          router.push(`/complete/${sessionId}`);
           return;
         }
 

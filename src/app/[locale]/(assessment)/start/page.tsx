@@ -22,7 +22,7 @@ export default function AssessmentStartPage() {
 
       if (res.status === 409) {
         const data = await res.json();
-        router.push(`/assessment/session/${data.sessionId}`);
+        router.push(`/session/${data.sessionId}`);
         return;
       }
 
@@ -38,7 +38,7 @@ export default function AssessmentStartPage() {
         `assessment-${data.sessionId}`,
         JSON.stringify(data)
       );
-      router.push(`/assessment/session/${data.sessionId}`);
+      router.push(`/session/${data.sessionId}`);
     } finally {
       setIsLoading(false);
     }

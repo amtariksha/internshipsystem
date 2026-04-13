@@ -52,7 +52,7 @@ export default function AssessmentCompletePage() {
             </div>
           ) : reportSlug ? (
             <Button
-              onClick={() => router.push(`/dashboard/reports/${reportSlug}`)}
+              onClick={() => router.push(`/reports/${reportSlug}`)}
               className="w-full"
             >
               {t("viewReport")}
