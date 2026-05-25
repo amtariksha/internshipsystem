@@ -60,7 +60,10 @@ export async function POST(req: Request) {
   let aiAnalysis: object | null = null;
   let aiScore: number | null = null;
 
-  if (sq.type === "SJT" && selectedOption != null) {
+  const isNoneOfAbove = sq.type === "SJT" && selectedOption === 0 && freeText;
+
+  if (sq.type === "SJT" && selectedOption != null && selectedOption > 0) {
+    // Standard SJT option — score from pre-defined weights
     const { data: weights } = await sb
       .from("question_options")
       .select("weights")
@@ -72,6 +75,38 @@ export async function POST(req: Request) {
     if (weights) {
       const w = weights.weights as Record<string, number>;
       sjtScore = w[sq.dim_code] ?? 0;
+    }
+  } else if (isNoneOfAbove) {
+    // "None of the above" — score the free-text response using AI
+    const { data: variant } = await sb
+      .from("question_variants")
+      .select("scenario")
+      .eq("question_id", sq.question_id)
+      .eq("locale", locale)
+      .single();
+
+    try {
+      const scoringResult = await generateText({
+        model: MODEL,
+        output: Output.object({ schema: freeTextScoringSchema }),
+        prompt: buildScoringPrompt({
+          scenario: variant?.scenario ?? "",
+          selectedOptionText: "[User chose 'None of the above' and provided their own response]",
+          freeText,
+          dimensionName: sq.dim_name,
+          dimensionDescription: sq.dim_desc,
+          locale,
+        }),
+      });
+      if (scoringResult.output) {
+        aiAnalysis = scoringResult.output;
+        aiScore = scoringResult.output.score;
+        // For "none of the above", use AI score as the SJT score (normalized to 1-5 scale)
+        sjtScore = Math.max(1, Math.min(5, aiScore));
+      }
+    } catch {
+      // Fallback: neutral score when AI scoring fails
+      sjtScore = 2.5;
     }
   } else if (sq.type === "AI_FOLLOWUP" && freeText) {
     const { data: variant } = await sb

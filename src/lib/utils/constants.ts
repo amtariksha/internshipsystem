@@ -160,10 +160,13 @@ export const ASSESSMENT_CONFIG = {
   },
 } as const;
 
-export const SUPPORTED_LOCALES = ["en", "hi"] as const;
+export const SUPPORTED_LOCALES = ["en", "hi", "te", "ta", "kn"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
   hi: "हिन्दी",
+  te: "తెలుగు",
+  ta: "தமிழ்",
+  kn: "ಕನ್ನಡ",
 };

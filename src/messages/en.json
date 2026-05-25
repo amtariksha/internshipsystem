@@ -26,6 +26,7 @@
   },
   "landing": {
     "hero": {
+      "badge": "12 Dimensions · AI-Adaptive · Multilingual",
       "title": "Discover Your Entrepreneurial DNA",
       "subtitle": "AI-powered assessment across 12 scientifically-grounded dimensions. Understand your strengths, growth areas, and career readiness.",
       "cta": "Start Your Assessment",
@@ -50,6 +51,8 @@
       }
     },
     "audience": {
+      "dimensionsTitle": "The 12 Assessment Dimensions",
+      "dimensionsSubtitle": "Scientifically grounded in Duckworth Grit-S, Big Five, HEXACO, Dweck, Bandura, and more.",
       "title": "Who Is This For?",
       "students": "Students (15-25) exploring career paths and self-awareness",
       "founders": "Startup founders evaluating team readiness",
@@ -75,6 +78,8 @@
     "session": {
       "questionOf": "Question {current} of {total}",
       "sjtInstruction": "Read the scenario and rank the options from most to least preferred.",
+      "noneOfAbove": "None of the above — I'd do something different",
+      "nonePlaceholder": "Describe what you would actually do in this situation. Be specific and authentic (min 20 characters).",
       "freeTextInstruction": "Share your thoughts in detail. Be specific and authentic.",
       "timeGuide": "Suggested time: {seconds}s",
       "submitting": "Submitting...",
@@ -280,5 +285,18 @@
     "READY_TO_BUILD": "Ready to Build",
     "READY_TO_CONTRIBUTE": "Ready to Contribute",
     "GROWING_FOUNDATION": "Growing Foundation"
+  },
+  "footer": {
+    "copyright": "© {year} Amtariksha Tech Pvt Ltd. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "legal": {
+    "privacyTitle": "Privacy Policy",
+    "privacyDescription": "How we collect, use, and protect your personal data.",
+    "privacyContent": "This privacy policy explains how AEDHAS by Amtariksha Tech Pvt Ltd collects, uses, stores, and protects your personal information in compliance with the Indian Digital Personal Data Protection Act, 2023 (DPDP Act). We collect personal information including your name, date of birth, educational details, and assessment responses solely for the purpose of providing career assessment and guidance services. For users under 18 years of age, verifiable parental or guardian consent is required before data processing. Your data is stored securely on encrypted servers and is never sold to third parties. You have the right to access, correct, and request deletion of your personal data at any time by contacting us at support@aedhas.com.",
+    "termsTitle": "Terms of Service",
+    "termsDescription": "Terms governing your use of the AEDHAS platform.",
+    "termsContent": "By accessing and using the AEDHAS platform operated by Amtariksha Tech Pvt Ltd, you agree to these terms of service. AEDHAS provides AI-powered personality and entrepreneurial readiness assessments for educational and career guidance purposes only. Assessment results are indicative and should not be considered as definitive career advice. Users must provide accurate information during registration and assessment. Any attempt to manipulate assessment results through dishonest responses, automated tools, or other means may result in account suspension. We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the modified terms. For queries, contact support@aedhas.com."
   }
 }

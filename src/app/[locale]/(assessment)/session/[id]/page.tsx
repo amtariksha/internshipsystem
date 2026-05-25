@@ -132,12 +132,14 @@ export default function AssessmentSessionPage() {
           scenario={question.scenario ?? ""}
           prompt={question.prompt ?? ""}
           options={question.options}
-          onSubmit={(pos) => {
+          onSubmit={(pos, freeText) => {
             setLastSelectedOption(pos);
-            submitResponse({ selectedOption: pos });
+            submitResponse({ selectedOption: pos, freeText });
           }}
           isSubmitting={isSubmitting}
           sjtInstruction={t("sjtInstruction")}
+          noneLabel={t("noneOfAbove")}
+          nonePlaceholder={t("nonePlaceholder")}
         />
       ) : (
         <FreeTextInput

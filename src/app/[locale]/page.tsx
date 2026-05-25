@@ -27,12 +27,12 @@ export default function LandingPage() {
     <div className="flex min-h-full flex-col">
       <Navbar />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden border-b border-border">
           <div className="mx-auto max-w-6xl px-4 py-24 text-center">
             <Badge variant="secondary" className="mb-4">
-              12 Dimensions &middot; AI-Adaptive &middot; Multilingual
+              {t("hero.badge")}
             </Badge>
             <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               {t("hero.title")}
@@ -80,10 +80,10 @@ export default function LandingPage() {
         <section className="border-b border-border py-20">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="text-center text-2xl font-bold">
-              The 12 Assessment Dimensions
+              {t("audience.dimensionsTitle")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
-              Scientifically grounded in Duckworth Grit-S, Big Five, HEXACO, Dweck, Bandura, and more.
+              {t("audience.dimensionsSubtitle")}
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-2">
               {dimensions.map((dim) => (
