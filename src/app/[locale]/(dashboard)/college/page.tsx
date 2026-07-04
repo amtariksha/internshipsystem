@@ -20,7 +20,7 @@ export default async function CollegeDashboard({ params }: CollegeDashboardProps
 
   const { data: caller } = await sb
     .from("users")
-    .select("role")
+    .select("role, organization_id")
     .eq("clerk_id", clerkId)
     .single();
   if (!caller || caller.role !== "COLLEGE_ADMIN") {
@@ -29,28 +29,55 @@ export default async function CollegeDashboard({ params }: CollegeDashboardProps
 
   const t = await getTranslations({ locale, namespace: "dashboardCollege" });
 
-  // Aggregate stats
-  const { count: totalStudents } = await sb
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("role", "STUDENT");
+  const organizationId = caller!.organization_id as string | null;
 
-  const { count: totalAssessments } = await sb
-    .from("assessment_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "COMPLETED");
+  // Scope everything to students in the admin's organization.
+  const { data: orgStudents } = organizationId
+    ? await sb
+        .from("users")
+        .select("id")
+        .eq("role", "STUDENT")
+        .eq("organization_id", organizationId)
+    : { data: [] };
 
-  const { count: totalDomainTests } = await sb
-    .from("domain_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "COMPLETED");
+  const studentIds = (orgStudents ?? []).map((s) => s.id as string);
+  const totalStudents = studentIds.length;
 
-  // Tier distribution
-  const { data: reports } = await sb
-    .from("reports")
-    .select("tier_startup, tier_tech, composite_score")
-    .order("generated_at", { ascending: false })
-    .limit(100);
+  const totalAssessments = studentIds.length
+    ? (
+        await sb
+          .from("assessment_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "COMPLETED")
+          .in("user_id", studentIds)
+      ).count
+    : 0;
+
+  const totalDomainTests = studentIds.length
+    ? (
+        await sb
+          .from("domain_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "COMPLETED")
+          .in("user_id", studentIds)
+      ).count
+    : 0;
+
+  // Sessions for these students → reports.
+  const { data: scopedSessions } = studentIds.length
+    ? await sb.from("assessment_sessions").select("id").in("user_id", studentIds)
+    : { data: [] };
+  const sessionIds = (scopedSessions ?? []).map((s) => s.id as string);
+
+  // Tier distribution — reports for org students only.
+  const { data: reports } = sessionIds.length
+    ? await sb
+        .from("reports")
+        .select("tier_startup, tier_tech, composite_score")
+        .in("session_id", sessionIds)
+        .order("generated_at", { ascending: false })
+        .limit(100)
+    : { data: [] };
 
   const tierDist: Record<string, number> = {};
   for (const r of reports ?? []) {

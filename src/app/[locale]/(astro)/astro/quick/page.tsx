@@ -4,11 +4,21 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type NumerologySystem = "chaldean" | "pythagorean";
 
 interface AstroResult {
   destinyNumber: number;
@@ -23,6 +33,7 @@ export default function AstroQuickPage() {
   const t = useTranslations("astro");
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
+  const [system, setSystem] = useState<NumerologySystem>("chaldean");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AstroResult | null>(null);
 
@@ -33,7 +44,7 @@ export default function AstroQuickPage() {
       const res = await fetch("/api/astro/quick", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, dob }),
+        body: JSON.stringify({ name, dob, system }),
       });
       if (res.ok) {
         setResult(await res.json());
@@ -80,10 +91,38 @@ export default function AstroQuickPage() {
                     required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="system">{t("quick.systemLabel")}</Label>
+                  <Select
+                    value={system}
+                    onValueChange={(v) => v && setSystem(v as NumerologySystem)}
+                  >
+                    <SelectTrigger id="system" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="chaldean">
+                        {t("quick.systemChaldean")}
+                      </SelectItem>
+                      <SelectItem value="pythagorean">
+                        {t("quick.systemPythagorean")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? t("quick.analyzing") : t("quick.analyze")}
                 </Button>
               </form>
+
+              <p className="mt-4 text-center text-sm">
+                <Link
+                  href="/astro/full"
+                  className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                >
+                  {t("quick.exploreFull")}
+                </Link>
+              </p>
             </CardContent>
           </Card>
 

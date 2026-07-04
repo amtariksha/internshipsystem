@@ -21,7 +21,7 @@ export default async function EmployerDashboard({ params }: EmployerDashboardPro
 
   const { data: caller } = await sb
     .from("users")
-    .select("role")
+    .select("role, organization_id")
     .eq("clerk_id", clerkId)
     .single();
   if (!caller || caller.role !== "EMPLOYER") {
@@ -30,17 +30,42 @@ export default async function EmployerDashboard({ params }: EmployerDashboardPro
 
   const t = await getTranslations({ locale, namespace: "dashboardEmployer" });
 
-  // Get recent completed reports with user info
-  const { data: reports } = await sb
-    .from("reports")
-    .select("slug, composite_score, tier_startup, tier_tech, generated_at, locale")
-    .order("generated_at", { ascending: false })
-    .limit(20);
+  const organizationId = caller!.organization_id as string | null;
 
-  // Get summary stats
-  const { count: totalCandidates } = await sb
-    .from("reports")
-    .select("id", { count: "exact", head: true });
+  // Scope: candidates are students in this employer's organization.
+  const { data: orgStudents } = organizationId
+    ? await sb
+        .from("users")
+        .select("id")
+        .eq("role", "STUDENT")
+        .eq("organization_id", organizationId)
+    : { data: [] };
+  const studentIds = (orgStudents ?? []).map((s) => s.id as string);
+
+  const { data: scopedSessions } = studentIds.length
+    ? await sb.from("assessment_sessions").select("id").in("user_id", studentIds)
+    : { data: [] };
+  const sessionIds = (scopedSessions ?? []).map((s) => s.id as string);
+
+  // Recent completed reports for org candidates only.
+  const { data: reports } = sessionIds.length
+    ? await sb
+        .from("reports")
+        .select("slug, composite_score, tier_startup, tier_tech, generated_at, locale")
+        .in("session_id", sessionIds)
+        .order("generated_at", { ascending: false })
+        .limit(20)
+    : { data: [] };
+
+  // Summary stat — total candidate reports in this organization.
+  const totalCandidates = sessionIds.length
+    ? (
+        await sb
+          .from("reports")
+          .select("id", { count: "exact", head: true })
+          .in("session_id", sessionIds)
+      ).count
+    : 0;
 
   const tierColors: Record<string, string> = {
     READY_TO_LEAD: "bg-green-500/20 text-green-400",

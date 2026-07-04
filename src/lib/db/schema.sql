@@ -336,6 +336,29 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS backlog_count integer NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS employment_status text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete boolean NOT NULL DEFAULT false;
 
+-- ─── ORGANIZATIONS (Phase 5) — see migration 002 ─────────────
+
+CREATE TABLE IF NOT EXISTS organizations (
+  id            text PRIMARY KEY DEFAULT generate_cuid(),
+  name          text NOT NULL,
+  type          text NOT NULL CHECK (type IN ('COLLEGE', 'EMPLOYER')),
+  invite_code   text UNIQUE NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_invite_code ON organizations(invite_code);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id text REFERENCES organizations(id);
+
+CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
+
+-- ─── GUARDIAN CONSENT (Phase 5, DPDP Act 2023) — see migration 003 ─────
+-- Sensitive PII: parental consent for under-18 users. Never log these values.
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_email text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_consent_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_consent_token text;
+
 -- ─── DOMAIN KNOWLEDGE TABLES ─────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS domain_questions (
@@ -499,10 +522,39 @@ ALTER TABLE reports ADD COLUMN IF NOT EXISTS domain_score jsonb;
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS ai_collab_session_id text REFERENCES ai_collab_sessions(id);
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS ai_collab_score jsonb;
 
--- ─── EXTEND DOMAIN SESSIONS (anti-cheat parity) ──────────────
+-- ─── MULTI-LOCALE REPORT NARRATIVES (Phase 5) — see migration 004 ──────
+-- Cache report narratives generated in languages other than reports.locale.
 
+CREATE TABLE IF NOT EXISTS report_narratives (
+  id            text PRIMARY KEY DEFAULT generate_cuid(),
+  report_id     text NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  locale        text NOT NULL,
+  narrative     jsonb NOT NULL,
+  generated_at  timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(report_id, locale)
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_narratives_lookup ON report_narratives(report_id, locale);
+
+-- ─── ANTI-CHEAT HARDENING (Phase 5) — see migration 005 ──────
+
+-- Per-question leak-tracing watermark.
+ALTER TABLE session_questions ADD COLUMN IF NOT EXISTS watermark_hash text;
+
+-- Question-pool rotation reuses the existing questions.is_active column above
+-- (the pool queries already filter on is_active = true).
+
+-- AI collaboration session integrity flags.
+ALTER TABLE ai_collab_sessions ADD COLUMN IF NOT EXISTS flagged boolean NOT NULL DEFAULT false;
+ALTER TABLE ai_collab_sessions ADD COLUMN IF NOT EXISTS flag_reasons jsonb;
+
+-- Domain session integrity flags (anti-cheat parity).
 ALTER TABLE domain_sessions ADD COLUMN IF NOT EXISTS flagged boolean NOT NULL DEFAULT false;
 ALTER TABLE domain_sessions ADD COLUMN IF NOT EXISTS flag_reasons jsonb;
+
+-- RAPID_FIRE question type: session_questions.type is free-text `text NOT NULL`
+-- with NO CHECK constraint, so 'RAPID_FIRE' is allowed without a schema change.
+-- Validation lives in the application layer.
 
 -- ─── DOMAIN KNOWLEDGE RPC FUNCTIONS ──────────────────────────
 
@@ -610,6 +662,8 @@ ALTER TABLE ai_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_collab_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_collab_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_collab_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_narratives ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS automatically.
 -- These policies allow read access for authenticated Supabase users (future use).

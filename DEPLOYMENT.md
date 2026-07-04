@@ -264,3 +264,73 @@ Browser → Vercel Edge → proxy.ts (Clerk auth + i18n)
                           → Server Components (reports, dashboard)
                               → Supabase PostgreSQL (direct queries + RPC)
 ```
+
+---
+
+## Maintenance Scripts
+
+Two standalone maintenance scripts live in `scripts/` and run with
+[`tsx`](https://www.npmjs.com/package/tsx) (installed as a devDependency). They
+connect to Supabase with the **service role** key, so run them from a trusted
+environment only — never ship the service role key to a client.
+
+### Shared required env vars
+
+| Env var | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (bypasses RLS) |
+| `AI_GATEWAY_API_KEY` | Gateway key for the AI SDK (`seed-question-variants` only; on Vercel this is auto-managed via OIDC) |
+
+Each script validates that the required vars are present and exits with a clear
+message if any are missing.
+
+### `seed-question-variants.ts`
+
+Back-fills the missing `question_variants` (and their `question_options` text)
+for the `hi`, `te`, `ta`, and `kn` locales by AI-translating the English (`en`)
+variants with cultural adaptation of startup scenarios. **This must be run once**
+to enable `te`/`ta`/`kn` assessments — without these rows, assessments in those
+locales fail because there is no question content to render.
+
+- Idempotent: any `(question_id, locale)` pair that already exists is skipped, so
+  it is safe to re-run after new English questions are added.
+- Scoring `weights` on options are locale-independent and copied verbatim; only
+  option `text` is translated.
+- There is no `needs_review` column on `question_variants`, so AI-generated rows
+  are flagged for human review by logging every inserted `(question_id, locale)`
+  pair and writing the full list to `scripts/seed-output.json`. **Review these
+  translations before relying on them.**
+
+```bash
+npx tsx scripts/seed-question-variants.ts            # translate + insert
+npx tsx scripts/seed-question-variants.ts --dry-run  # log what would be inserted, no writes
+```
+
+### `rotate-questions.ts`
+
+Implements PRD question-pool rotation: retire ~20% of active questions every
+60–90 days to limit exposure/leakage. Retired questions are set inactive
+(`questions.is_active = false`) — **nothing is ever deleted**, so historical
+sessions and reports stay intact.
+
+- Toggles the existing `questions.is_active` column (the same flag the assessment
+  pool query filters on), so retired questions drop out of future sessions.
+- Deterministic selection: the oldest active questions by `created_at` (then `id`
+  as a stable tie-breaker) are retired first, so runs are reproducible and the
+  pool rotates naturally.
+- `--percent N` overrides the default 20%; at least 1 question is retired when any
+  are active.
+
+```bash
+npx tsx scripts/rotate-questions.ts               # retire ~20%
+npx tsx scripts/rotate-questions.ts --percent 25  # retire ~25%
+npx tsx scripts/rotate-questions.ts --dry-run     # log only, no writes
+```
+
+Schedule via cron (e.g. run on the 1st of every third month at 02:00):
+
+```cron
+0 2 1 */3 * cd /path/to/app && npx tsx scripts/rotate-questions.ts >> /var/log/aedhas-rotate.log 2>&1
+```
+

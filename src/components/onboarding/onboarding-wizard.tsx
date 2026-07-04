@@ -17,6 +17,11 @@ import { LOCALE_LABELS } from "@/lib/utils/constants";
 import { DOMAINS, EDUCATIONAL_STAGES, EMPLOYMENT_STATUSES } from "@/lib/utils/domain-constants";
 import type { EducationalStage } from "@/lib/utils/domain-constants";
 
+export const ONBOARDING_ROLES = ["STUDENT", "COLLEGE_ADMIN", "EMPLOYER"] as const;
+export type OnboardingRole = (typeof ONBOARDING_ROLES)[number];
+
+type OrgMode = "create" | "join";
+
 interface OnboardingWizardProps {
   initialName: string;
   onComplete: (data: OnboardingData) => Promise<void>;
@@ -26,6 +31,10 @@ export interface OnboardingData {
   name: string;
   dateOfBirth: string;
   preferredLocale: string;
+  role: OnboardingRole;
+  organizationName: string | null;
+  organizationInviteCode: string | null;
+  guardianEmail: string | null;
   educationalStage: EducationalStage;
   fieldOfStudy: string | null;
   yearOfStudy: number | null;
@@ -34,8 +43,20 @@ export interface OnboardingData {
   employmentStatus: string | null;
 }
 
+/**
+ * Steps:
+ *   1. Basic info (name, DOB, locale)
+ *   2. Role selection (Student / College Admin / Employer)
+ *   3. Role-specific branch:
+ *        - Student  → educational stage
+ *        - Org roles → organization (create/join)
+ *   4. Student only: academic details (skipped for PRE_COLLEGE)
+ *
+ * Under-18 students collect a guardian email on the educational-stage step.
+ */
 export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardProps) {
   const t = useTranslations("onboarding");
+  const tr = useTranslations("onboardingRoles");
   const td = useTranslations("domains");
 
   const [step, setStep] = useState(1);
@@ -46,35 +67,70 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
   const [dob, setDob] = useState("");
   const [locale, setLocale] = useState("en");
 
-  // Step 2
-  const [educationalStage, setEducationalStage] = useState<EducationalStage | "">("");
+  // Step 2 — role
+  const [role, setRole] = useState<OnboardingRole | "">("");
 
-  // Step 3
+  // Org roles
+  const [orgMode, setOrgMode] = useState<OrgMode>("create");
+  const [organizationName, setOrganizationName] = useState("");
+  const [organizationInviteCode, setOrganizationInviteCode] = useState("");
+
+  // Student
+  const [educationalStage, setEducationalStage] = useState<EducationalStage | "">("");
+  const [guardianEmail, setGuardianEmail] = useState("");
   const [fieldOfStudy, setFieldOfStudy] = useState("");
   const [yearOfStudy, setYearOfStudy] = useState<number | "">("");
   const [yearOfGraduation, setYearOfGraduation] = useState<number | "">("");
   const [backlogCount, setBacklogCount] = useState(0);
   const [employmentStatus, setEmploymentStatus] = useState("");
 
-  const suggestedStage = useMemo(() => {
+  const age = useMemo(() => {
     if (!dob) return null;
-    const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    return Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  }, [dob]);
+
+  const isMinor = age !== null && age < 18;
+
+  const suggestedStage = useMemo(() => {
+    if (age === null) return null;
     if (age < 18) return "PRE_COLLEGE";
     if (age <= 22) return "COLLEGE";
     return "GRADUATE";
-  }, [dob]);
+  }, [age]);
 
-  const totalSteps = educationalStage === "PRE_COLLEGE" ? 2 : 3;
+  const isStudent = role === "STUDENT";
+  const isOrgRole = role === "COLLEGE_ADMIN" || role === "EMPLOYER";
+
+  // Total steps: org roles finish at step 3; students need academic details
+  // unless PRE_COLLEGE (finish at step 3).
+  const totalSteps = useMemo(() => {
+    if (isOrgRole) return 3;
+    if (isStudent && educationalStage && educationalStage !== "PRE_COLLEGE") return 4;
+    return 3;
+  }, [isOrgRole, isStudent, educationalStage]);
+
+  const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   function canProceedStep1() {
     return name.trim().length > 0 && dob.length > 0;
   }
 
   function canProceedStep2() {
-    return educationalStage !== "";
+    return role !== "";
   }
 
   function canProceedStep3() {
+    if (isOrgRole) {
+      if (orgMode === "create") return organizationName.trim().length > 0;
+      return organizationInviteCode.trim().length > 0;
+    }
+    // Student — educational stage
+    if (educationalStage === "") return false;
+    if (isMinor && !isEmailValid(guardianEmail)) return false;
+    return true;
+  }
+
+  function canProceedStep4() {
     if (educationalStage === "COLLEGE") {
       return fieldOfStudy !== "" && yearOfStudy !== "";
     }
@@ -84,14 +140,11 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
     return true;
   }
 
+  const isFinalStep = step === totalSteps;
+
   async function handleNext() {
     if (step === 1) {
       setStep(2);
-      return;
-    }
-
-    if (step === 2 && educationalStage === "PRE_COLLEGE") {
-      await submitData();
       return;
     }
 
@@ -101,6 +154,16 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
     }
 
     if (step === 3) {
+      // Org roles finish here. Students continue to academic details unless PRE_COLLEGE.
+      if (isOrgRole || educationalStage === "PRE_COLLEGE") {
+        await submitData();
+        return;
+      }
+      setStep(4);
+      return;
+    }
+
+    if (step === 4) {
       await submitData();
     }
   }
@@ -108,16 +171,31 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
   async function submitData() {
     setIsSubmitting(true);
     try {
+      const resolvedRole = (role || "STUDENT") as OnboardingRole;
+      const resolvedStage: EducationalStage = isStudent
+        ? (educationalStage as EducationalStage)
+        : "GRADUATE";
       await onComplete({
         name,
         dateOfBirth: dob,
         preferredLocale: locale,
-        educationalStage: educationalStage as EducationalStage,
-        fieldOfStudy: fieldOfStudy || null,
-        yearOfStudy: typeof yearOfStudy === "number" ? yearOfStudy : null,
-        yearOfGraduation: typeof yearOfGraduation === "number" ? yearOfGraduation : null,
-        backlogCount,
-        employmentStatus: employmentStatus || null,
+        role: resolvedRole,
+        organizationName:
+          isOrgRole && orgMode === "create" && organizationName.trim()
+            ? organizationName.trim()
+            : null,
+        organizationInviteCode:
+          isOrgRole && orgMode === "join" && organizationInviteCode.trim()
+            ? organizationInviteCode.trim().toUpperCase()
+            : null,
+        guardianEmail: isStudent && isMinor && guardianEmail.trim() ? guardianEmail.trim() : null,
+        educationalStage: resolvedStage,
+        fieldOfStudy: isStudent ? fieldOfStudy || null : null,
+        yearOfStudy: isStudent && typeof yearOfStudy === "number" ? yearOfStudy : null,
+        yearOfGraduation:
+          isStudent && typeof yearOfGraduation === "number" ? yearOfGraduation : null,
+        backlogCount: isStudent ? backlogCount : 0,
+        employmentStatus: isStudent ? employmentStatus || null : null,
       });
     } finally {
       setIsSubmitting(false);
@@ -125,6 +203,20 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
   }
 
   const currentYear = new Date().getFullYear();
+
+  function stepTitle() {
+    if (step === 1) return t("step1Title");
+    if (step === 2) return tr("roleStepTitle");
+    if (step === 3) return isOrgRole ? tr("orgStepTitle") : t("step2Title");
+    return t("step3Title");
+  }
+
+  function stepDescription() {
+    if (step === 1) return t("description");
+    if (step === 2) return tr("roleStepDescription");
+    if (step === 3) return isOrgRole ? tr("orgStepDescription") : t("step2Description");
+    return t("step3Description");
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -140,16 +232,8 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
               />
             ))}
           </div>
-          <CardTitle>
-            {step === 1 && t("step1Title")}
-            {step === 2 && t("step2Title")}
-            {step === 3 && t("step3Title")}
-          </CardTitle>
-          <CardDescription>
-            {step === 1 && t("description")}
-            {step === 2 && t("step2Description")}
-            {step === 3 && t("step3Description")}
-          </CardDescription>
+          <CardTitle>{stepTitle()}</CardTitle>
+          <CardDescription>{stepDescription()}</CardDescription>
         </CardHeader>
         <CardContent>
           {/* ── Step 1: Basic Info ── */}
@@ -197,8 +281,95 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
             </div>
           )}
 
-          {/* ── Step 2: Educational Stage ── */}
+          {/* ── Step 2: Role ── */}
           {step === 2 && (
+            <div className="space-y-2">
+              <Label>{tr("roleLabel")}</Label>
+              {ONBOARDING_ROLES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={`w-full rounded-lg border p-3 text-left text-sm transition-colors ${
+                    role === r
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <span className="font-medium">
+                    {r === "STUDENT" && tr("roleStudent")}
+                    {r === "COLLEGE_ADMIN" && tr("roleCollege")}
+                    {r === "EMPLOYER" && tr("roleEmployer")}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {r === "STUDENT" && tr("roleStudentDesc")}
+                    {r === "COLLEGE_ADMIN" && tr("roleCollegeDesc")}
+                    {r === "EMPLOYER" && tr("roleEmployerDesc")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── Step 3 (org roles): Organization ── */}
+          {step === 3 && isOrgRole && (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOrgMode("create")}
+                  className={`flex-1 rounded-lg border p-2 text-sm transition-colors ${
+                    orgMode === "create"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  {tr("createOrg")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrgMode("join")}
+                  className={`flex-1 rounded-lg border p-2 text-sm transition-colors ${
+                    orgMode === "join"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  {tr("joinOrg")}
+                </button>
+              </div>
+
+              {orgMode === "create" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="orgName">{tr("orgName")}</Label>
+                  <Input
+                    id="orgName"
+                    value={organizationName}
+                    onChange={(e) => setOrganizationName(e.target.value)}
+                    placeholder={
+                      role === "COLLEGE_ADMIN" ? tr("orgNameCollegeHint") : tr("orgNameEmployerHint")
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">{tr("createOrgHint")}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="inviteCode">{tr("inviteCode")}</Label>
+                  <Input
+                    id="inviteCode"
+                    value={organizationInviteCode}
+                    onChange={(e) => setOrganizationInviteCode(e.target.value.toUpperCase())}
+                    placeholder="ABCD1234"
+                    className="font-mono uppercase"
+                  />
+                  <p className="text-xs text-muted-foreground">{tr("joinOrgHint")}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 3 (student): Educational Stage + guardian ── */}
+          {step === 3 && isStudent && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>{t("educationalStageLabel")}</Label>
@@ -225,11 +396,26 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
                   </button>
                 ))}
               </div>
+
+              {isMinor && (
+                <div className="space-y-2">
+                  <Label htmlFor="guardianEmail">{tr("guardianEmail")}</Label>
+                  <Input
+                    id="guardianEmail"
+                    type="email"
+                    value={guardianEmail}
+                    onChange={(e) => setGuardianEmail(e.target.value)}
+                    placeholder="parent@example.com"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">{tr("guardianEmailHint")}</p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── Step 3: Academic Details ── */}
-          {step === 3 && educationalStage === "COLLEGE" && (
+          {/* ── Step 4: Academic Details (students) ── */}
+          {step === 4 && educationalStage === "COLLEGE" && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>{t("yearOfStudyLabel")}</Label>
@@ -277,7 +463,7 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
             </div>
           )}
 
-          {step === 3 && educationalStage === "GRADUATE" && (
+          {step === 4 && educationalStage === "GRADUATE" && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>{t("yearOfGraduationLabel")}</Label>
@@ -352,15 +538,12 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
                 isSubmitting ||
                 (step === 1 && !canProceedStep1()) ||
                 (step === 2 && !canProceedStep2()) ||
-                (step === 3 && !canProceedStep3())
+                (step === 3 && !canProceedStep3()) ||
+                (step === 4 && !canProceedStep4())
               }
               className="flex-1"
             >
-              {isSubmitting
-                ? "..."
-                : step === totalSteps || (step === 2 && educationalStage === "PRE_COLLEGE")
-                  ? t("complete")
-                  : t("next")}
+              {isSubmitting ? "..." : isFinalStep ? t("complete") : t("next")}
             </Button>
           </div>
         </CardContent>

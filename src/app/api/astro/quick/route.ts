@@ -9,6 +9,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const { name, dob } = body;
+  const system = body.system === "pythagorean" ? "pythagorean" : "chaldean";
 
   if (!name || !dob) {
     return NextResponse.json({ error: "name and dob are required" }, { status: 400 });
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
   const res = await fetch(`${baseUrl}/api/astro/numerology`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, dob }),
+    body: JSON.stringify({ name, dob, system }),
   });
 
   if (!res.ok) {

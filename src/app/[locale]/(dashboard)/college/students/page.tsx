@@ -20,19 +20,25 @@ export default async function CollegeStudentsPage({ params }: CollegeStudentsPag
 
   const { data: caller } = await sb
     .from("users")
-    .select("role")
+    .select("role, organization_id")
     .eq("clerk_id", clerkId)
     .single();
   if (!caller || caller.role !== "COLLEGE_ADMIN") {
     redirect({ href: "/", locale });
   }
 
-  const { data: students } = await sb
-    .from("users")
-    .select("id, name, email, field_of_study, educational_stage, backlog_count, created_at")
-    .eq("role", "STUDENT")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const organizationId = caller!.organization_id as string | null;
+
+  // Scope directory to students in the admin's organization only.
+  const { data: students } = organizationId
+    ? await sb
+        .from("users")
+        .select("id, name, email, field_of_study, educational_stage, backlog_count, created_at")
+        .eq("role", "STUDENT")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .limit(100)
+    : { data: [] as never[] };
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "@/lib/i18n/navigation";
 import { getSupabase } from "@/lib/db/supabase";
+import { routing } from "@/lib/i18n/routing";
 import { DimensionRadar } from "@/components/reports/dimension-radar";
 import { TierBadge } from "@/components/reports/tier-badge";
 import { ScoreBreakdown } from "@/components/reports/score-breakdown";
@@ -10,13 +12,32 @@ import { DomainScoreCard } from "@/components/domain/domain-score-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { REQUIRED_DIMENSION_COUNT } from "@/lib/assessment/session-assembler";
+import { ReportLanguageSelector } from "./language-selector";
 
 interface ReportPageProps {
   params: Promise<{ slug: string; locale: string }>;
+  searchParams: Promise<{ rlang?: string | string[] }>;
 }
 
-export default async function ReportPage({ params }: ReportPageProps) {
+interface Narrative {
+  summary: string;
+  strengths: string[];
+  growthAreas: string[];
+  careerPaths: { path: string; fit: number; reasoning: string }[];
+  personalitySnapshot: string;
+}
+
+const LOCALE_NATIVE_LABELS: Record<string, string> = {
+  en: "English",
+  hi: "हिन्दी",
+  te: "తెలుగు",
+  ta: "தமிழ்",
+  kn: "ಕನ್ನಡ",
+};
+
+export default async function ReportPage({ params, searchParams }: ReportPageProps) {
   const { slug, locale } = await params;
+  const { rlang } = await searchParams;
 
   const { userId: clerkId } = await auth();
   if (!clerkId) {
@@ -24,6 +45,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
   }
 
   const sb = getSupabase();
+  const t = await getTranslations({ locale, namespace: "report" });
 
   // Get report with user name via RPC
   const { data: reports } = await sb.rpc("get_report_by_slug", { p_slug: slug });
@@ -31,30 +53,87 @@ export default async function ReportPage({ params }: ReportPageProps) {
   if (!reports || reports.length === 0) notFound();
   const report = reports[0];
 
-  // Ownership check: the report's session must belong to the signed-in user.
-  // Queries run with the service role (bypasses RLS), so this check is the
-  // authorization boundary. notFound() avoids leaking report existence.
+  // Ownership / authorization check. Queries run with the service role (bypasses
+  // RLS), so this check is the authorization boundary. notFound() avoids leaking
+  // report existence. Access is granted when the caller either:
+  //   1. owns the report's session, OR
+  //   2. is an EMPLOYER / COLLEGE_ADMIN in the SAME organization as the student
+  //      who owns the report (org-scoped viewing of candidate reports).
   const [{ data: caller }, { data: owningSession }] = await Promise.all([
-    sb.from("users").select("id").eq("clerk_id", clerkId).single(),
+    sb.from("users").select("id, role, organization_id").eq("clerk_id", clerkId).single(),
     sb.from("assessment_sessions").select("user_id").eq("id", report.session_id).single(),
   ]);
 
-  if (!caller || !owningSession || owningSession.user_id !== caller.id) {
+  if (!caller || !owningSession) {
     notFound();
   }
+
+  const isOwner = owningSession.user_id === caller.id;
+
+  let hasOrgAccess = false;
+  if (!isOwner && (caller.role === "EMPLOYER" || caller.role === "COLLEGE_ADMIN") && caller.organization_id) {
+    const { data: owner } = await sb
+      .from("users")
+      .select("organization_id")
+      .eq("id", owningSession.user_id)
+      .single();
+    hasOrgAccess = !!owner?.organization_id && owner.organization_id === caller.organization_id;
+  }
+
+  if (!isOwner && !hasOrgAccess) {
+    notFound();
+  }
+
+  // ─── Report language resolution ──────────────────────────────
+  // report.narrative + report.locale hold the default (assessment) language.
+  // Additional languages are cached in report_narratives. The viewer requests a
+  // language via ?rlang=xx.
+  const defaultLocale = report.locale as string;
+  const requested =
+    typeof rlang === "string" && routing.locales.includes(rlang as (typeof routing.locales)[number])
+      ? rlang
+      : defaultLocale;
+
+  // Which locales already have a narrative (default + anything cached).
+  const { data: cachedRows } = await sb
+    .from("report_narratives")
+    .select("locale")
+    .eq("report_id", report.id);
+  const generatedLocales = new Set<string>([
+    defaultLocale,
+    ...((cachedRows ?? []) as { locale: string }[]).map((r) => r.locale),
+  ]);
+
+  // Resolve the narrative for the requested language. If the requested language
+  // isn't the default and isn't cached yet, we fall back to rendering the
+  // default narrative; the selector surfaces a "not generated yet" control so
+  // the viewer can trigger generation. Radar/score labels come from message
+  // keys and stay in the UI locale regardless.
+  let narrative = report.narrative as Narrative;
+
+  if (requested !== defaultLocale) {
+    const { data: localized } = await sb
+      .from("report_narratives")
+      .select("narrative")
+      .eq("report_id", report.id)
+      .eq("locale", requested)
+      .single();
+    if (localized?.narrative) {
+      narrative = localized.narrative as Narrative;
+      generatedLocales.add(requested);
+    }
+  }
+
+  const languageOptions = routing.locales.map((code) => ({
+    code,
+    label: LOCALE_NATIVE_LABELS[code] ?? code,
+    generated: generatedLocales.has(code),
+  }));
 
   // Get dimension scores via RPC
   const { data: dimScores } = await sb.rpc("get_dimension_scores", {
     p_session_id: report.session_id,
   });
-
-  const narrative = report.narrative as {
-    summary: string;
-    strengths: string[];
-    growthAreas: string[];
-    careerPaths: { path: string; fit: number; reasoning: string }[];
-    personalitySnapshot: string;
-  };
 
   const dimensionScores = (dimScores ?? []) as {
     name_key: string;
@@ -104,6 +183,24 @@ export default async function ReportPage({ params }: ReportPageProps) {
           <span className="text-sm text-muted-foreground">/ 100</span>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          <ReportLanguageSelector
+            slug={slug}
+            sessionId={report.session_id}
+            currentLocale={requested}
+            options={languageOptions}
+            labels={{
+              reportLanguage: t("reportLanguage"),
+              notGeneratedYet: t("notGeneratedYet"),
+              generateInLanguage: t("generateInLanguage"),
+              generating: t("generatingLanguage"),
+              generateFailed: t("generateFailed"),
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {report.commitment_flag && (
         <CommitmentFlag
