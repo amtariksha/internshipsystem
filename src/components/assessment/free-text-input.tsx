@@ -10,6 +10,8 @@ interface FreeTextInputProps {
   onSubmit: (text: string) => void;
   isSubmitting: boolean;
   freeTextInstruction: string;
+  placeholder: string;
+  pasteBlockedMessage: string;
 }
 
 export function FreeTextInput({
@@ -17,11 +19,15 @@ export function FreeTextInput({
   onSubmit,
   isSubmitting,
   freeTextInstruction,
+  placeholder,
+  pasteBlockedMessage,
 }: FreeTextInputProps) {
   const [text, setText] = useState("");
+  const [pasteBlocked, setPasteBlocked] = useState(false);
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
+    setPasteBlocked(true);
   }
 
   return (
@@ -37,11 +43,16 @@ export function FreeTextInput({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onPaste={handlePaste}
-          placeholder="Share your thoughts here..."
+          placeholder={placeholder}
           rows={6}
           className="resize-none"
           maxLength={3000}
         />
+        {pasteBlocked && (
+          <p role="status" className="text-xs text-amber-500">
+            {pasteBlockedMessage}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
             {text.length} / 3000 characters

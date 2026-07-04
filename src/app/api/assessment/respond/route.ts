@@ -194,9 +194,11 @@ export async function POST(req: Request) {
   });
 
   // Apply LLM fingerprint penalty
+  let authenticityFlagged = false;
   const fp = (aiAnalysis as Record<string, unknown> | null)?.llmFingerprint as { isLikelyAI?: boolean; confidence?: number } | undefined;
   if (fp?.isLikelyAI && (fp.confidence ?? 0) > 0.7) {
     confidence = confidence * 0.5; // 50% penalty for likely AI-generated
+    authenticityFlagged = true;
     // Flag the session
     await sb
       .from("assessment_sessions")
@@ -243,7 +245,7 @@ export async function POST(req: Request) {
       .from("assessment_sessions")
       .update({ status: "COMPLETED", completed_at: new Date().toISOString() })
       .eq("id", sessionId);
-    return NextResponse.json({ complete: true, sessionId, aiScoringFailed });
+    return NextResponse.json({ complete: true, sessionId, aiScoringFailed, authenticityFlagged });
   }
 
   const next = nextRows[0];
@@ -294,6 +296,7 @@ export async function POST(req: Request) {
         complete: false,
         currentPosition: nextPos,
         aiScoringFailed,
+        authenticityFlagged,
         question: { id: next.sq_id, type: "AI_FOLLOWUP", aiPrompt: followUp.text, dimensionName: next.dim_name, timeGuideSeconds: 120 },
       });
     } catch {
@@ -312,9 +315,10 @@ export async function POST(req: Request) {
           .from("assessment_sessions")
           .update({ status: "COMPLETED", completed_at: new Date().toISOString() })
           .eq("id", sessionId);
-        return NextResponse.json({ complete: true, sessionId, aiScoringFailed });
+        return NextResponse.json({ complete: true, sessionId, aiScoringFailed, authenticityFlagged });
       }
-      return NextResponse.json({ complete: false, currentPosition: fallback[0].position, aiScoringFailed, question: { id: fallback[0].id, type: "SJT", scenario: "", prompt: "", options: [], dimensionName: "", timeGuideSeconds: 90 } });
+      return NextResponse.json({ complete: false, currentPosition: fallback[0].position, aiScoringFailed,
+        authenticityFlagged, question: { id: fallback[0].id, type: "SJT", scenario: "", prompt: "", options: [], dimensionName: "", timeGuideSeconds: 90 } });
     }
   }
 
@@ -341,6 +345,7 @@ export async function POST(req: Request) {
     complete: false,
     currentPosition: nextPos,
     aiScoringFailed,
+        authenticityFlagged,
     question: {
       id: next.sq_id, type: isRapidFire ? "RAPID_FIRE" : "SJT",
       scenario: nextVariant?.scenario ?? "", prompt: nextVariant?.prompt ?? "",

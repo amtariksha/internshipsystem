@@ -165,6 +165,8 @@ export default function AssessmentSessionPage() {
           onSubmit={(text) => submitResponse({ freeText: text })}
           isSubmitting={isSubmitting}
           freeTextInstruction={t("freeTextInstruction")}
+          placeholder={t("freeTextPlaceholder")}
+          pasteBlockedMessage={t("pasteBlocked")}
         />
       )}
     </div>

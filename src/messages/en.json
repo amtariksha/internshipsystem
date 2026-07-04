@@ -87,7 +87,9 @@
       "freeTextInstruction": "Share your thoughts in detail. Be specific and authentic.",
       "timeGuide": "Suggested time: {seconds}s",
       "submitting": "Submitting...",
-      "generating": "Generating next question..."
+      "generating": "Generating next question...",
+      "freeTextPlaceholder": "Share your thoughts here...",
+      "pasteBlocked": "Pasting is disabled to keep your responses authentic."
     },
     "complete": {
       "title": "Assessment Complete!",
