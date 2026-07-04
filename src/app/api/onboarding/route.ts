@@ -181,7 +181,7 @@ export async function POST(req: Request) {
   // Step 6: Dispatch guardian consent email (fail-safe — never blocks response).
   if (consentGuardianEmail && guardianConsentToken) {
     const origin = resolveOrigin(req);
-    const consentUrl = `${origin}/en/consent/verify?token=${guardianConsentToken}`;
+    const consentUrl = `${origin}/${preferredLocale}/consent/verify?token=${guardianConsentToken}`;
     await sendGuardianConsentEmail({
       to: consentGuardianEmail,
       studentName: name,

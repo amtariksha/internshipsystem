@@ -369,5 +369,17 @@
     "inviteCode": "Invite code",
     "guardianEmail": "Parent / Guardian email",
     "guardianEmailHint": "Required for under-18. We'll email your guardian for consent."
+  },
+  "consent": {
+    "title": "Guardian Consent",
+    "verifying": "Verifying the consent link…",
+    "success": "Thank you. Your consent has been recorded. Your child may now take part in the AEDHAS assessment.",
+    "invalid": "This consent link is invalid or has expired. It may have already been used. Please contact support if you need a new link.",
+    "withdrawInfo": "You can withdraw this consent at any time by contacting our support team."
+  },
+  "rapidFire": {
+    "label": "Quick gut response",
+    "instruction": "Don't overthink it — pick the option that feels most natural, fast.",
+    "secondsLeft": "{seconds}s left"
   }
 }

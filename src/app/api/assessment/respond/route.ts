@@ -77,7 +77,24 @@ export async function POST(req: Request) {
 
   const isNoneOfAbove = sq.type === "SJT" && selectedOption === 0 && freeText;
 
-  if (sq.type === "SJT" && selectedOption != null && selectedOption > 0) {
+  // RAPID_FIRE anti-cheat: a synthetic, mid-session gut-response question that
+  // clones an SJT's content. Its ONLY signal is response *speed*, so it is
+  // deliberately EXCLUDED from dimension scoring (lower-risk choice: it cannot
+  // corrupt a dimension's score the way an SJT weight lookup would). We record
+  // the response for timing only. An implausibly slow answer (> 30s) is a weak
+  // authenticity signal and is recorded via the existing flag_reasons pattern.
+  const RAPID_FIRE_SLOW_MS = 30_000;
+  if (sq.type === "RAPID_FIRE") {
+    if (durationMs > RAPID_FIRE_SLOW_MS) {
+      await sb
+        .from("assessment_sessions")
+        .update({
+          flagged: true,
+          flag_reasons: { rapid_fire_slow: true, rapid_fire_ms: durationMs },
+        })
+        .eq("id", sessionId);
+    }
+  } else if (sq.type === "SJT" && selectedOption != null && selectedOption > 0) {
     // Standard SJT option — score from pre-defined weights
     const { data: weights } = await sb
       .from("question_options")
@@ -166,9 +183,13 @@ export async function POST(req: Request) {
     }
   }
 
+  // RAPID_FIRE has no free-text branch in confidence scoring; treat it as SJT
+  // (timing-only). computeResponseConfidence only special-cases AI_FOLLOWUP.
+  const confidenceType: "SJT" | "AI_FOLLOWUP" =
+    sq.type === "AI_FOLLOWUP" ? "AI_FOLLOWUP" : "SJT";
   let confidence = computeResponseConfidence({
     durationMs,
-    type: sq.type as "SJT" | "AI_FOLLOWUP",
+    type: confidenceType,
     freeTextLength: freeText?.length,
   });
 
@@ -297,7 +318,9 @@ export async function POST(req: Request) {
     }
   }
 
-  // Next is SJT
+  // Next is SJT or RAPID_FIRE. RAPID_FIRE clones an SJT's content, so it is
+  // delivered through the same variant/options lookup; only the type flag and
+  // the (much shorter) time guide differ, which drives the countdown UI.
   const { data: nextVariant } = await sb
     .from("question_variants")
     .select("scenario, prompt")
@@ -312,15 +335,17 @@ export async function POST(req: Request) {
     .eq("locale", locale)
     .order("position");
 
+  const isRapidFire = next.type === "RAPID_FIRE";
+
   return NextResponse.json({
     complete: false,
     currentPosition: nextPos,
     aiScoringFailed,
     question: {
-      id: next.sq_id, type: "SJT",
+      id: next.sq_id, type: isRapidFire ? "RAPID_FIRE" : "SJT",
       scenario: nextVariant?.scenario ?? "", prompt: nextVariant?.prompt ?? "",
       options: (nextOpts ?? []).map((o) => ({ position: o.position, text: o.text })),
-      dimensionName: next.dim_name, timeGuideSeconds: 90,
+      dimensionName: next.dim_name, timeGuideSeconds: isRapidFire ? 20 : 90,
     },
   });
 }

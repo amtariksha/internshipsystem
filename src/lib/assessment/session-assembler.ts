@@ -9,8 +9,11 @@ interface QuestionForAssembly {
 interface AssembledQuestion {
   questionId: string;
   position: number;
-  type: "SJT" | "AI_FOLLOWUP";
+  type: "SJT" | "AI_FOLLOWUP" | "RAPID_FIRE";
 }
+
+/** Suggested time budget (seconds) for the synthetic rapid-fire question. */
+export const RAPID_FIRE_TIME_GUIDE_SECONDS = 20;
 
 /** Total number of dimensions every assembled session must cover. */
 export const REQUIRED_DIMENSION_COUNT = DIMENSIONS.length;
@@ -155,7 +158,45 @@ export function assembleSession(
     throw new IncompleteCoverageError(missingDimensionIds);
   }
 
-  return assembled;
+  // Anti-cheat: splice ONE synthetic RAPID_FIRE question into the middle of the
+  // session. It reuses an existing SJT's content but is a distinct type whose
+  // primary signal is response *speed*. It is EXTRA — it is inserted only after
+  // the 12-dimension coverage guarantee has already been satisfied above, and
+  // findUncoveredDimensions ignores non-SJT types, so it never affects coverage.
+  // Best-effort: any ambiguity (no SJT to clone) leaves the session untouched.
+  return withRapidFireQuestion(assembled);
+}
+
+/**
+ * Insert a single RAPID_FIRE question at a deterministic mid-session position by
+ * cloning an existing SJT's questionId. Re-sequences positions so they stay
+ * 1-based and contiguous. Never throws: if there is no SJT to clone, or anything
+ * else is off, the original assembly is returned unchanged.
+ */
+function withRapidFireQuestion(
+  assembled: AssembledQuestion[]
+): AssembledQuestion[] {
+  try {
+    const sourceSjt = assembled.find((aq) => aq.type === "SJT");
+    if (!sourceSjt) return assembled;
+
+    const rapidFire: AssembledQuestion = {
+      questionId: sourceSjt.questionId,
+      position: 0, // placeholder — re-sequenced below
+      type: "RAPID_FIRE",
+    };
+
+    const insertAt = Math.floor(assembled.length / 2);
+    const next = [
+      ...assembled.slice(0, insertAt),
+      rapidFire,
+      ...assembled.slice(insertAt),
+    ];
+
+    return next.map((aq, i) => ({ ...aq, position: i + 1 }));
+  } catch {
+    return assembled;
+  }
 }
 
 // Simple seeded PRNG (mulberry32)

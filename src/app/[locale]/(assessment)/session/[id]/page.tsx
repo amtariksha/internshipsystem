@@ -13,7 +13,7 @@ import { useTimer } from "@/hooks/use-timer";
 
 interface QuestionData {
   id: string;
-  type: "SJT" | "AI_FOLLOWUP";
+  type: "SJT" | "AI_FOLLOWUP" | "RAPID_FIRE";
   scenario?: string;
   prompt?: string;
   options?: { position: number; text: string }[];
@@ -24,6 +24,7 @@ interface QuestionData {
 
 export default function AssessmentSessionPage() {
   const t = useTranslations("assessment.session");
+  const tRapid = useTranslations("rapidFire");
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
@@ -126,8 +127,25 @@ export default function AssessmentSessionPage() {
         />
       </div>
 
-      {/* Question */}
-      {question.type === "SJT" && question.options ? (
+      {/* Rapid-fire anti-cheat banner: a prominent gut-response prompt with a
+          live 20-second countdown. Speed is the signal we care about here. */}
+      {question.type === "RAPID_FIRE" && (
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 text-center">
+          <p className="text-sm font-semibold text-primary">{tRapid("label")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {tRapid("instruction")}
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-primary">
+            {tRapid("secondsLeft", {
+              seconds: Math.max(0, question.timeGuideSeconds - timer.elapsed),
+            })}
+          </p>
+        </div>
+      )}
+
+      {/* Question. SJT and RAPID_FIRE are both option-based (RAPID_FIRE clones an
+          SJT's content) and render through SjtCard. AI_FOLLOWUP is free-text. */}
+      {(question.type === "SJT" || question.type === "RAPID_FIRE") && question.options ? (
         <SjtCard
           scenario={question.scenario ?? ""}
           prompt={question.prompt ?? ""}

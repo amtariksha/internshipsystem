@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabase";
@@ -17,15 +18,33 @@ export async function POST(req: Request) {
   const { locale = "en", weightProfile = "STARTUP_FOUNDER" } = body;
   const sb = getSupabase();
 
-  // Find user
+  // Find user. Also fetch age/date_of_birth and guardian_consent_at so the
+  // under-18 parental-consent gate (DPDP Act 2023) can run before any session
+  // is created.
   const { data: user, error: userErr } = await sb
     .from("users")
-    .select("id")
+    .select("id, age, date_of_birth, guardian_consent_at")
     .eq("clerk_id", clerkId)
     .single();
 
   if (userErr || !user) {
     return NextResponse.json({ error: "User not found. Complete onboarding first." }, { status: 404 });
+  }
+
+  // Guardian-consent gate: under-18 users may not start an assessment until a
+  // guardian has recorded consent. Prefer the stored `age`; fall back to
+  // computing from date_of_birth. Adults (>=18) and consented minors proceed.
+  const userAge = computeUserAge(user.age, user.date_of_birth);
+  const isMinor = userAge != null && userAge < 18;
+  if (isMinor && !user.guardian_consent_at) {
+    return NextResponse.json(
+      {
+        error:
+          "A parent or guardian must approve this assessment before you can begin. Please check the consent email sent to your guardian.",
+        code: "GUARDIAN_CONSENT_REQUIRED",
+      },
+      { status: 403 }
+    );
   }
 
   // Check for existing in-progress session
@@ -150,12 +169,16 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  // Insert session questions
+  // Insert session questions. Each row carries a per-question watermark_hash — a
+  // stable leak-tracing fingerprint of (question_id + ":" + sessionId). Computing
+  // it is best-effort: a hashing failure must never block session creation, so it
+  // is wrapped and falls back to null (watermark_hash is nullable).
   const sessionQuestionRows = assembled.map((aq) => ({
     session_id: sessionId,
     question_id: aq.questionId,
     position: aq.position,
     type: aq.type,
+    watermark_hash: computeWatermarkHash(aq.questionId, sessionId),
   }));
 
   const { error: sqErr } = await sb.from("session_questions").insert(sessionQuestionRows);
@@ -192,4 +215,41 @@ export async function POST(req: Request) {
       timeGuideSeconds: 90,
     } : null,
   });
+}
+
+/**
+ * Resolve a user's age for the consent gate. Prefers the stored integer `age`
+ * column; falls back to computing whole years from `date_of_birth`. Returns
+ * null when neither is usable so callers can fail open (treat as adult) rather
+ * than incorrectly blocking a legitimate assessment.
+ */
+function computeUserAge(
+  storedAge: number | null | undefined,
+  dateOfBirth: string | null | undefined
+): number | null {
+  if (typeof storedAge === "number" && Number.isFinite(storedAge)) {
+    return storedAge;
+  }
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const years = Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  return Number.isFinite(years) ? years : null;
+}
+
+/**
+ * Per-question leak-tracing watermark: a stable, truncated SHA-256 of
+ * (questionId + ":" + sessionId). Best-effort — returns null on any failure so
+ * session creation never breaks over a watermark.
+ */
+function computeWatermarkHash(questionId: string, sessionId: string): string | null {
+  try {
+    return createHash("sha256")
+      .update(`${questionId}:${sessionId}`)
+      .digest("hex")
+      .slice(0, 16);
+  } catch (err) {
+    console.error("[assessment/start] watermark hashing failed", { sessionId, err });
+    return null;
+  }
 }

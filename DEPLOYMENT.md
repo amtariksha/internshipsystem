@@ -73,6 +73,15 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 3. Events: `user.created`, `user.updated`
 4. Copy the signing secret → add as `CLERK_WEBHOOK_SIGNING_SECRET` in Vercel env vars (found under the webhook endpoint's settings in the Clerk Dashboard)
 
+**Configure Clerk auth methods (dashboard-only — cannot be set in code):**
+
+These close QA findings #16, #17, #60, #61, #62. They live entirely in the Clerk Dashboard:
+
+1. **Phone / OTP login** (India market): Clerk Dashboard → **User & Authentication → Email, Phone, Username** → enable **Phone number** and turn on **Phone verification code (SMS OTP)**. Clerk's env config currently reports `phone_number.enabled: false`.
+2. **Google OAuth**: Clerk Dashboard → **User & Authentication → Social Connections** → enable **Google** (add OAuth client, or use Clerk's shared dev credentials for staging). Reduces sign-up friction for the 15–25 demographic.
+3. **Legal URLs for consent**: Clerk Dashboard → **Customization → Legal** → set **Privacy Policy URL** to `https://your-domain/en/privacy` and **Terms URL** to `https://your-domain/en/terms` (both pages ship in-app). Clerk currently reports these as `null`.
+4. After enabling phone/social, the Clerk `<SignIn>`/`<SignUp>` components render the new options automatically — no code change is needed on our side.
+
 ### 2d. Enable AI Gateway
 
 1. Go to **Vercel Dashboard → your project → Settings**
