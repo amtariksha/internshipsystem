@@ -499,6 +499,11 @@ ALTER TABLE reports ADD COLUMN IF NOT EXISTS domain_score jsonb;
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS ai_collab_session_id text REFERENCES ai_collab_sessions(id);
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS ai_collab_score jsonb;
 
+-- ─── EXTEND DOMAIN SESSIONS (anti-cheat parity) ──────────────
+
+ALTER TABLE domain_sessions ADD COLUMN IF NOT EXISTS flagged boolean NOT NULL DEFAULT false;
+ALTER TABLE domain_sessions ADD COLUMN IF NOT EXISTS flag_reasons jsonb;
+
 -- ─── DOMAIN KNOWLEDGE RPC FUNCTIONS ──────────────────────────
 
 CREATE OR REPLACE FUNCTION get_domain_questions_by_difficulty(

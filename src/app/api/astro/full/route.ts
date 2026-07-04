@@ -17,6 +17,25 @@ export async function POST(req: Request) {
     );
   }
 
+  if (typeof latitude !== "number" || Number.isNaN(latitude) || latitude < -90 || latitude > 90) {
+    return NextResponse.json(
+      { error: "latitude must be a number between -90 and 90" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    typeof longitude !== "number" ||
+    Number.isNaN(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return NextResponse.json(
+      { error: "longitude must be a number between -180 and 180" },
+      { status: 400 }
+    );
+  }
+
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";

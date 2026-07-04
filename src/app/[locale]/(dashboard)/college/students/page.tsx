@@ -1,9 +1,31 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "@/lib/i18n/navigation";
 import { getSupabase } from "@/lib/db/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export default async function CollegeStudentsPage() {
+interface CollegeStudentsPageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function CollegeStudentsPage({ params }: CollegeStudentsPageProps) {
+  const { locale } = await params;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    redirect({ href: "/sign-in", locale });
+  }
+
   const sb = getSupabase();
+
+  const { data: caller } = await sb
+    .from("users")
+    .select("role")
+    .eq("clerk_id", clerkId)
+    .single();
+  if (!caller || caller.role !== "COLLEGE_ADMIN") {
+    redirect({ href: "/", locale });
+  }
 
   const { data: students } = await sb
     .from("users")

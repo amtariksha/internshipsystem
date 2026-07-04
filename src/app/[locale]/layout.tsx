@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { allFontVariables } from "@/lib/utils/fonts";
 import { routing, type Locale } from "@/lib/i18n/routing";
@@ -80,6 +81,7 @@ export default async function LocaleLayout({
   }
 
   const messages = (await import(`@/messages/${locale}.json`)).default;
+  const tA11y = await getTranslations({ locale, namespace: "a11y" });
 
   return (
     <html
@@ -91,7 +93,7 @@ export default async function LocaleLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:rounded focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-ring"
         >
-          Skip to main content
+          {tA11y("skipToMain")}
         </a>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}

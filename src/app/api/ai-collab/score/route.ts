@@ -6,11 +6,17 @@ import { computeAiCollabScore } from "@/lib/assessment/ai-collab-scorer";
 import { buildSessionScoringPrompt } from "@/lib/ai/prompts/ai-collab-session-scorer";
 import { sessionScoringSchema } from "@/lib/ai/schemas/ai-collab-scoring";
 import { MODEL } from "@/lib/ai/client";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success: withinLimit } = await checkRateLimit(`aic-score:${clerkId}`, 5, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { sessionId } = await req.json();
@@ -132,7 +138,6 @@ export async function POST(req: Request) {
     .insert({
       session_id: sessionId,
       challenge_id: session.challenge_id,
-      ...dimensionScores,
       decomposition_score: dimensionScores.ai_decomposition,
       first_principles_score: dimensionScores.ai_first_principles,
       debugging_score: dimensionScores.ai_debugging,

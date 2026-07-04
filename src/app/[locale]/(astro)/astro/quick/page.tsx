@@ -81,7 +81,7 @@ export default function AstroQuickPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Analyzing..." : t("quick.analyze")}
+                  {isLoading ? t("quick.analyzing") : t("quick.analyze")}
                 </Button>
               </form>
             </CardContent>

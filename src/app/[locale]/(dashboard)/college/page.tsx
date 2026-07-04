@@ -1,8 +1,33 @@
+import { auth } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
+import { redirect } from "@/lib/i18n/navigation";
 import { getSupabase } from "@/lib/db/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default async function CollegeDashboard() {
+interface CollegeDashboardProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function CollegeDashboard({ params }: CollegeDashboardProps) {
+  const { locale } = await params;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    redirect({ href: "/sign-in", locale });
+  }
+
   const sb = getSupabase();
+
+  const { data: caller } = await sb
+    .from("users")
+    .select("role")
+    .eq("clerk_id", clerkId)
+    .single();
+  if (!caller || caller.role !== "COLLEGE_ADMIN") {
+    redirect({ href: "/", locale });
+  }
+
+  const t = await getTranslations({ locale, namespace: "dashboardCollege" });
 
   // Aggregate stats
   const { count: totalStudents } = await sb
@@ -39,37 +64,37 @@ export default async function CollegeDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">College Dashboard</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-3xl font-bold">{totalStudents ?? 0}</p>
-            <p className="text-sm text-muted-foreground">Total Students</p>
+            <p className="text-sm text-muted-foreground">{t("students")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-3xl font-bold">{totalAssessments ?? 0}</p>
-            <p className="text-sm text-muted-foreground">Behavioral Assessments</p>
+            <p className="text-sm text-muted-foreground">{t("behavioralAssessments")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-3xl font-bold">{totalDomainTests ?? 0}</p>
-            <p className="text-sm text-muted-foreground">Domain Tests</p>
+            <p className="text-sm text-muted-foreground">{t("domainTests")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-3xl font-bold">{avgScore}</p>
-            <p className="text-sm text-muted-foreground">Avg Composite Score</p>
+            <p className="text-sm text-muted-foreground">{t("avgCompositeScore")}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Tier Distribution (Startup Context)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("tierDistribution")}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
             {Object.entries(tierDist).map(([tier, count]) => (
@@ -82,7 +107,7 @@ export default async function CollegeDashboard() {
               </div>
             ))}
             {Object.keys(tierDist).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No assessment data yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("noData")}</p>
             )}
           </div>
         </CardContent>

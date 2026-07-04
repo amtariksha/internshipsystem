@@ -16,6 +16,9 @@
     "signUp": "Sign Up",
     "signOut": "Sign Out"
   },
+  "a11y": {
+    "skipToMain": "Skip to main content"
+  },
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
@@ -73,7 +76,8 @@
         "honest": "There are no right or wrong answers — be authentic",
         "noCopying": "Copy-paste is disabled during the assessment"
       },
-      "begin": "Begin Assessment"
+      "begin": "Begin Assessment",
+      "starting": "Starting..."
     },
     "session": {
       "questionOf": "Question {current} of {total}",
@@ -115,7 +119,8 @@
       "description": "Enter your name and date of birth for numerology-based career insights.",
       "nameLabel": "Full Name (in any script)",
       "dobLabel": "Date of Birth",
-      "analyze": "Analyze"
+      "analyze": "Analyze",
+      "analyzing": "Analyzing..."
     },
     "full": {
       "title": "Full Kundli Analysis",
@@ -155,6 +160,27 @@
     "recommended": "Recommended",
     "preCollegeNote": "Based on your profile, AstroCareer is available for career exploration. Other assessments unlock when you enter college.",
     "completeOnboarding": "Complete your profile to see available assessments."
+  },
+  "dashboardCollege": {
+    "title": "College Dashboard",
+    "students": "Total Students",
+    "behavioralAssessments": "Behavioral Assessments",
+    "domainTests": "Domain Tests",
+    "avgCompositeScore": "Avg Composite Score",
+    "tierDistribution": "Tier Distribution (Startup Context)",
+    "noData": "No assessment data yet."
+  },
+  "dashboardEmployer": {
+    "title": "Employer Dashboard",
+    "totalCandidates": "Total Candidates",
+    "candidates": "Recent Candidates",
+    "startupReady": "Startup Ready",
+    "techReady": "Tech Ready",
+    "noCandidates": "No candidates assessed yet.",
+    "tierReadyToLead": "Ready to Lead",
+    "tierReadyToBuild": "Ready to Build",
+    "tierReadyToContribute": "Ready to Contribute",
+    "tierGrowingFoundation": "Growing Foundation"
   },
   "onboarding": {
     "step1Title": "Basic Information",

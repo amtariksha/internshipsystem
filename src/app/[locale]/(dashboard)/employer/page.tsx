@@ -1,10 +1,34 @@
+import { auth } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
 import { getSupabase } from "@/lib/db/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "@/lib/i18n/navigation";
+import { Link, redirect } from "@/lib/i18n/navigation";
 
-export default async function EmployerDashboard() {
+interface EmployerDashboardProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function EmployerDashboard({ params }: EmployerDashboardProps) {
+  const { locale } = await params;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    redirect({ href: "/sign-in", locale });
+  }
+
   const sb = getSupabase();
+
+  const { data: caller } = await sb
+    .from("users")
+    .select("role")
+    .eq("clerk_id", clerkId)
+    .single();
+  if (!caller || caller.role !== "EMPLOYER") {
+    redirect({ href: "/", locale });
+  }
+
+  const t = await getTranslations({ locale, namespace: "dashboardEmployer" });
 
   // Get recent completed reports with user info
   const { data: reports } = await sb
@@ -26,21 +50,21 @@ export default async function EmployerDashboard() {
   };
 
   const tierLabels: Record<string, string> = {
-    READY_TO_LEAD: "Ready to Lead",
-    READY_TO_BUILD: "Ready to Build",
-    READY_TO_CONTRIBUTE: "Ready to Contribute",
-    GROWING_FOUNDATION: "Growing Foundation",
+    READY_TO_LEAD: t("tierReadyToLead"),
+    READY_TO_BUILD: t("tierReadyToBuild"),
+    READY_TO_CONTRIBUTE: t("tierReadyToContribute"),
+    GROWING_FOUNDATION: t("tierGrowingFoundation"),
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Employer Dashboard</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-3xl font-bold">{totalCandidates ?? 0}</p>
-            <p className="text-sm text-muted-foreground">Total Candidates</p>
+            <p className="text-sm text-muted-foreground">{t("totalCandidates")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -48,7 +72,7 @@ export default async function EmployerDashboard() {
             <p className="text-3xl font-bold">
               {(reports ?? []).filter((r) => r.tier_startup === "READY_TO_LEAD" || r.tier_startup === "READY_TO_BUILD").length}
             </p>
-            <p className="text-sm text-muted-foreground">Startup Ready</p>
+            <p className="text-sm text-muted-foreground">{t("startupReady")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -56,13 +80,13 @@ export default async function EmployerDashboard() {
             <p className="text-3xl font-bold">
               {(reports ?? []).filter((r) => r.tier_tech === "READY_TO_LEAD" || r.tier_tech === "READY_TO_BUILD").length}
             </p>
-            <p className="text-sm text-muted-foreground">Tech Ready</p>
+            <p className="text-sm text-muted-foreground">{t("techReady")}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Recent Candidates</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("candidates")}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
             {(reports ?? []).map((r) => (
@@ -88,7 +112,7 @@ export default async function EmployerDashboard() {
               </Link>
             ))}
             {(!reports || reports.length === 0) && (
-              <p className="text-sm text-muted-foreground text-center py-8">No candidates assessed yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t("noCandidates")}</p>
             )}
           </div>
         </CardContent>

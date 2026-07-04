@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "@/lib/i18n/navigation";
 import { getSupabase } from "@/lib/db/supabase";
 import { DimensionRadar } from "@/components/reports/dimension-radar";
 import { TierBadge } from "@/components/reports/tier-badge";
@@ -7,13 +9,20 @@ import { CommitmentFlag } from "@/components/reports/commitment-flag";
 import { DomainScoreCard } from "@/components/domain/domain-score-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { REQUIRED_DIMENSION_COUNT } from "@/lib/assessment/session-assembler";
 
 interface ReportPageProps {
   params: Promise<{ slug: string; locale: string }>;
 }
 
 export default async function ReportPage({ params }: ReportPageProps) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    redirect({ href: "/sign-in", locale });
+  }
+
   const sb = getSupabase();
 
   // Get report with user name via RPC
@@ -21,6 +30,18 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
   if (!reports || reports.length === 0) notFound();
   const report = reports[0];
+
+  // Ownership check: the report's session must belong to the signed-in user.
+  // Queries run with the service role (bypasses RLS), so this check is the
+  // authorization boundary. notFound() avoids leaking report existence.
+  const [{ data: caller }, { data: owningSession }] = await Promise.all([
+    sb.from("users").select("id").eq("clerk_id", clerkId).single(),
+    sb.from("assessment_sessions").select("user_id").eq("id", report.session_id).single(),
+  ]);
+
+  if (!caller || !owningSession || owningSession.user_id !== caller.id) {
+    notFound();
+  }
 
   // Get dimension scores via RPC
   const { data: dimScores } = await sb.rpc("get_dimension_scores", {
@@ -35,13 +56,29 @@ export default async function ReportPage({ params }: ReportPageProps) {
     personalitySnapshot: string;
   };
 
-  const radarData = (dimScores ?? []).map((ds: { name_key: string; normalized: number }) => ({
+  const dimensionScores = (dimScores ?? []) as {
+    name_key: string;
+    normalized: number;
+    confidence: number;
+  }[];
+
+  const radarData = dimensionScores.map((ds) => ({
     name: String(ds.name_key).replace("dimensions.", ""),
     score: Number(ds.normalized),
     fullMark: 100,
   }));
 
-  const breakdownData = (dimScores ?? []).map((ds: { name_key: string; normalized: number; confidence: number }) => ({
+  // Flag insufficient data: fewer than the required 12 dimensions were scored,
+  // or a dimension has no signal (normalized 0 AND confidence 0 — the shape a
+  // dimension with zero SJT and zero AI responses produces). This keeps a
+  // no-data 0 from being read as a genuine low score on the radar.
+  const hasInsufficientData =
+    dimensionScores.length < REQUIRED_DIMENSION_COUNT ||
+    dimensionScores.some(
+      (ds) => Number(ds.normalized) === 0 && Number(ds.confidence) === 0
+    );
+
+  const breakdownData = dimensionScores.map((ds) => ({
     name: String(ds.name_key).replace("dimensions.", ""),
     score: Number(ds.normalized),
     confidence: Number(ds.confidence),
@@ -77,7 +114,14 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
       <Card>
         <CardHeader><CardTitle>Dimension Profile</CardTitle></CardHeader>
-        <CardContent><DimensionRadar data={radarData} /></CardContent>
+        <CardContent className="space-y-3">
+          {hasInsufficientData && (
+            <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-500">
+              Some dimensions had insufficient data, so this profile may be incomplete.
+            </div>
+          )}
+          <DimensionRadar data={radarData} hasInsufficientData={hasInsufficientData} />
+        </CardContent>
       </Card>
 
       <Card>

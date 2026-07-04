@@ -1,4 +1,4 @@
-import { ASSESSMENT_CONFIG } from "@/lib/utils/constants";
+import { ASSESSMENT_CONFIG, DIMENSIONS } from "@/lib/utils/constants";
 
 interface QuestionForAssembly {
   id: string;
@@ -10,6 +10,53 @@ interface AssembledQuestion {
   questionId: string;
   position: number;
   type: "SJT" | "AI_FOLLOWUP";
+}
+
+/** Total number of dimensions every assembled session must cover. */
+export const REQUIRED_DIMENSION_COUNT = DIMENSIONS.length;
+
+/**
+ * Thrown when an assembled session fails to represent every required
+ * dimension with at least one SJT question. `missingDimensionIds` holds the
+ * dimension ids (as supplied to assembleSession) that had zero coverage, so
+ * the caller can map them back to human-readable codes and surface a clear
+ * error instead of silently producing an incomplete assessment.
+ */
+export class IncompleteCoverageError extends Error {
+  readonly missingDimensionIds: string[];
+
+  constructor(missingDimensionIds: string[]) {
+    super(
+      `Assembled session is missing coverage for ${missingDimensionIds.length} dimension(s)`
+    );
+    this.name = "IncompleteCoverageError";
+    this.missingDimensionIds = missingDimensionIds;
+  }
+}
+
+/**
+ * Verify that the assembled questions cover every dimension in `dimensionIds`
+ * with at least one SJT. Returns the list of dimension ids with zero coverage
+ * (empty when fully covered).
+ */
+export function findUncoveredDimensions(
+  assembled: AssembledQuestion[],
+  questions: QuestionForAssembly[],
+  dimensionIds: string[]
+): string[] {
+  const dimensionByQuestionId = new Map<string, string>();
+  for (const q of questions) {
+    dimensionByQuestionId.set(q.id, q.dimensionId);
+  }
+
+  const coveredDimensions = new Set<string>();
+  for (const aq of assembled) {
+    if (aq.type !== "SJT") continue;
+    const dimId = dimensionByQuestionId.get(aq.questionId);
+    if (dimId) coveredDimensions.add(dimId);
+  }
+
+  return dimensionIds.filter((dimId) => !coveredDimensions.has(dimId));
 }
 
 /**
@@ -97,6 +144,15 @@ export function assembleSession(
       position: position++,
       type: "AI_FOLLOWUP",
     });
+  }
+
+  // Post-assembly coverage guard: every one of the 12 dimensions must be
+  // represented by >=1 SJT. If the incoming pool was missing questions for a
+  // dimension (e.g. because a locale has no seeded variants), that dimension
+  // would otherwise be silently absent from the assessment and later score 0.
+  const missingDimensionIds = findUncoveredDimensions(assembled, questions, dimensionIds);
+  if (missingDimensionIds.length > 0) {
+    throw new IncompleteCoverageError(missingDimensionIds);
   }
 
   return assembled;

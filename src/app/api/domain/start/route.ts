@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabase";
 import { DOMAIN_ASSESSMENT_CONFIG } from "@/lib/utils/domain-constants";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { domainStartSchema } from "@/lib/validation/api-schemas";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -9,10 +11,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { domain, locale = "en" } = await req.json();
-  if (!domain) {
-    return NextResponse.json({ error: "Domain is required" }, { status: 400 });
+  const { success: withinLimit } = await checkRateLimit(`dom-start:${clerkId}`, 10, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
+
+  const rawBody = await req.json();
+  const parsed = domainStartSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+  const { domain, locale = "en" } = parsed.data;
 
   const sb = getSupabase();
 

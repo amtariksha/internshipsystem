@@ -2,11 +2,17 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabase";
 import { computeDomainScore } from "@/lib/assessment/domain-scorer";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success: withinLimit } = await checkRateLimit(`dom-score:${clerkId}`, 5, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { sessionId } = await req.json();
@@ -30,10 +36,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  // Check existing score
+  // Idempotency: if a score already exists for this session, return it as-is
+  // WITHOUT recomputing or re-inserting. Selects the same shape as the fresh
+  // insert below so cached and freshly-computed responses are consistent.
   const { data: existingScore } = await sb
     .from("domain_scores")
-    .select("id, composite_score, proficiency_level")
+    .select("id, composite_score, proficiency_level, mcq_score, ai_probe_score, questions_total, questions_correct")
     .eq("session_id", sessionId)
     .single();
 

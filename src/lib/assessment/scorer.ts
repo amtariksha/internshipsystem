@@ -24,15 +24,35 @@ export function scoreSjtResponse(
 }
 
 /**
+ * Result of scoring a single dimension.
+ *
+ * `missing` is true when the dimension had zero SJT AND zero AI responses.
+ * In that case rawScore/normalized are 0 not because the candidate scored
+ * poorly, but because there was no data — callers MUST distinguish this from
+ * a genuine low score (e.g. by rendering an "insufficient data" indicator
+ * rather than a 0 on the radar).
+ */
+export interface DimensionScoreResult {
+  rawScore: number;
+  confidence: number;
+  normalized: number;
+  missing: boolean;
+}
+
+/**
  * Compute composite score for a single dimension.
  * Blend: 60% SJT average + 40% AI analysis average, weighted by confidence.
  */
 export function computeDimensionScore(
   sjtScores: { score: number; confidence: number }[],
   aiScores: { score: number; confidence: number }[]
-): { rawScore: number; confidence: number; normalized: number } {
+): DimensionScoreResult {
   const SJT_WEIGHT = 0.6;
   const AI_WEIGHT = 0.4;
+
+  // A dimension with no SJT and no AI responses has no data to score.
+  // Flag it so a normalized 0 is not mistaken for a genuine low score.
+  const missing = sjtScores.length === 0 && aiScores.length === 0;
 
   const avgSjt = average(sjtScores.map((s) => s.score));
   const avgAi = average(aiScores.map((s) => s.score));
@@ -66,7 +86,7 @@ export function computeDimensionScore(
   // Normalize from 0-5 scale to 0-100
   const normalized = Math.round((rawScore / 5) * 100);
 
-  return { rawScore, confidence: adjustedConfidence, normalized: Math.min(100, Math.max(0, normalized)) };
+  return { rawScore, confidence: adjustedConfidence, normalized: Math.min(100, Math.max(0, normalized)), missing };
 }
 
 function average(nums: number[]): number {

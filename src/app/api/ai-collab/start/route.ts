@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabase";
 import { AI_COLLAB_CONFIG } from "@/lib/utils/ai-collab-constants";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { aiCollabStartSchema } from "@/lib/validation/ai-collab-schemas";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -9,7 +11,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { challengeId, domain, locale = "en" } = await req.json();
+  const { success: withinLimit } = await checkRateLimit(`aic-start:${clerkId}`, 10, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const parsed = aiCollabStartSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { challengeId, domain, locale = "en" } = parsed.data;
   const sb = getSupabase();
 
   const { data: user } = await sb

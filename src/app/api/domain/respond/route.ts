@@ -8,6 +8,9 @@ import { buildDomainProbeScoringPrompt } from "@/lib/ai/prompts/domain-scoring";
 import { domainProbeScoringSchema } from "@/lib/ai/schemas/domain-scoring";
 import { MODEL } from "@/lib/ai/client";
 import { DOMAIN_ASSESSMENT_CONFIG } from "@/lib/utils/domain-constants";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { runLlmFingerprint } from "@/lib/assessment/fingerprint";
+import { domainRespondSchema } from "@/lib/validation/api-schemas";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -15,8 +18,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { sessionId, questionId, selectedOption, startedAt, completedAt, freeText } = body;
+  const { success: withinLimit } = await checkRateLimit(`dom-resp:${clerkId}`, 20, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const rawBody = await req.json();
+  const parsed = domainRespondSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+  const { sessionId, questionId, selectedOption, startedAt, completedAt, freeText } = parsed.data;
 
   const sb = getSupabase();
 
@@ -41,6 +56,14 @@ export async function POST(req: Request) {
   const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
   const locale = sessionRow.locale;
 
+  // Tracks whether an optional AI probe was requested but failed to generate,
+  // so the fall-through "next question" response can signal it to the frontend.
+  let probeGenerationFailed = false;
+
+  // MCQ correctness result — only set on the MCQ path (null on the probe path).
+  // Lifted to function scope so the fall-through response can report it.
+  let mcqIsCorrect: boolean | null = null;
+
   // Get question details
   const { data: question } = await sb
     .from("domain_questions")
@@ -51,17 +74,6 @@ export async function POST(req: Request) {
   if (!question) {
     return NextResponse.json({ error: "Question not found" }, { status: 404 });
   }
-
-  // Check correctness
-  const { data: correctOption } = await sb
-    .from("domain_question_options")
-    .select("position")
-    .eq("question_id", questionId)
-    .eq("locale", locale)
-    .eq("is_correct", true)
-    .single();
-
-  const isCorrect = correctOption?.position === selectedOption;
 
   // Handle AI probe response (if this is a follow-up submission)
   if (freeText) {
@@ -116,10 +128,49 @@ export async function POST(req: Request) {
         .eq("id", existingResp.id);
     }
 
+    // Anti-cheat parity: LLM fingerprint check on probe free-text responses.
+    // Mirrors assessment/respond — flags the session if the response is
+    // likely AI-generated with high confidence.
+    if (freeText.length > 30) {
+      const fingerprint = await runLlmFingerprint({ freeText, locale });
+      if (fingerprint?.isLikelyAI && fingerprint.confidence > 0.7) {
+        await sb
+          .from("domain_sessions")
+          .update({
+            flagged: true,
+            flag_reasons: { llm_detected: true, fp_confidence: fingerprint.confidence },
+          })
+          .eq("id", sessionId);
+      }
+    }
+
     // Continue to next question (fall through below)
   } else {
     // This is an MCQ answer — record the response
     const position = sessionRow.questions_answered + 1;
+
+    // Check correctness — only for MCQ responses (probe responses skip this).
+    const { data: correctOption } = await sb
+      .from("domain_question_options")
+      .select("position")
+      .eq("question_id", questionId)
+      .eq("locale", locale)
+      .eq("is_correct", true)
+      .single();
+
+    // A missing is_correct option means the question is misconfigured for this
+    // locale. Treating it as an "incorrect" answer would silently corrupt the
+    // IRT ability estimate, so fail loudly instead.
+    if (!correctOption) {
+      console.error("[domain/respond] no is_correct option for question", { sessionId, questionId, locale });
+      return NextResponse.json(
+        { error: "Question configuration error", code: "NO_CORRECT_OPTION" },
+        { status: 500 }
+      );
+    }
+
+    const isCorrect = correctOption.position === selectedOption;
+    mcqIsCorrect = isCorrect;
 
     // Update IRT
     const { theta, se } = updateAbilityEstimate(
@@ -188,7 +239,7 @@ export async function POST(req: Request) {
         .from("domain_question_options")
         .select("text")
         .eq("question_id", questionId)
-        .eq("position", correctOption?.position ?? 1)
+        .eq("position", correctOption.position)
         .eq("locale", locale)
         .single();
 
@@ -222,8 +273,12 @@ export async function POST(req: Request) {
           questionId,
           timeGuideSeconds: DOMAIN_ASSESSMENT_CONFIG.AI_PROBE_TIME_GUIDE_SECONDS,
         });
-      } catch {
-        // AI failed — skip probe, continue to next question
+      } catch (err) {
+        // AI probe failed — this is optional, so continue gracefully to the
+        // next question, but log it and flag the response so the frontend can
+        // distinguish "probe failed" from "no probe needed".
+        console.error("[domain/respond] probe generation failed", { sessionId, questionId, err });
+        probeGenerationFailed = true;
       }
     }
 
@@ -316,8 +371,9 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     complete: false,
-    isCorrect: freeText ? undefined : isCorrect,
+    isCorrect: freeText ? undefined : mcqIsCorrect ?? undefined,
     needsProbe: false,
+    probeGenerationFailed,
     currentPosition: updatedSession.questions_answered + 1,
     question: {
       id: nextQ.question_id,

@@ -7,6 +7,9 @@ import { buildAiCollabSystemPrompt } from "@/lib/ai/prompts/ai-collab-assistant"
 import { buildPromptComplexityPrompt } from "@/lib/ai/prompts/ai-collab-prompt-scorer";
 import { promptComplexitySchema } from "@/lib/ai/schemas/ai-collab-scoring";
 import { MODEL } from "@/lib/ai/client";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { runLlmFingerprint } from "@/lib/assessment/fingerprint";
+import { aiCollabMessageSchema } from "@/lib/validation/ai-collab-schemas";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -14,10 +17,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { sessionId, message } = await req.json();
-  if (!message?.trim()) {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
+  const { success: withinLimit } = await checkRateLimit(`aic-msg:${clerkId}`, 20, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
+
+  const parsed = aiCollabMessageSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { sessionId, message } = parsed.data;
 
   const sb = getSupabase();
 
@@ -79,6 +89,19 @@ export async function POST(req: Request) {
     promptComplexity = complexityResult.output?.complexity ?? null;
   } catch {
     // Non-critical — skip
+  }
+
+  // Anti-cheat parity: fingerprint long user messages for AI-generated content.
+  // NOTE: ai_collab_sessions has no flag columns in schema.sql (unlike
+  // assessment_sessions), so we log a warning instead of persisting a flag.
+  if (message.length > 30) {
+    const fingerprint = await runLlmFingerprint({ freeText: message, locale: session.locale });
+    if (fingerprint?.isLikelyAI && fingerprint.confidence > 0.7) {
+      console.warn("[ai-collab/message] likely AI-generated user message", {
+        sessionId,
+        confidence: fingerprint.confidence,
+      });
+    }
   }
 
   // Save user message

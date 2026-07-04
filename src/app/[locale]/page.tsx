@@ -1,14 +1,26 @@
-import { useTranslations } from "next-intl";
-import { Link } from "@/lib/i18n/navigation";
+import { auth } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
+import { Link, redirect } from "@/lib/i18n/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export default function LandingPage() {
-  const t = useTranslations("landing");
-  const td = useTranslations("dimensions");
+interface LandingPageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function LandingPage({ params }: LandingPageProps) {
+  const { locale } = await params;
+
+  const { userId } = await auth();
+  if (userId) {
+    redirect({ href: "/dashboard", locale });
+  }
+
+  const t = await getTranslations({ locale, namespace: "landing" });
+  const td = await getTranslations({ locale, namespace: "dimensions" });
 
   const features = [
     { key: "dimensions" as const, icon: "📊" },

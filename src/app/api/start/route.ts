@@ -1,7 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabase";
-import { assembleSession } from "@/lib/assessment/session-assembler";
+import {
+  assembleSession,
+  IncompleteCoverageError,
+  REQUIRED_DIMENSION_COUNT,
+} from "@/lib/assessment/session-assembler";
 
 /**
  * Shim: /api/start → proxies the same logic as /api/assessment/start
@@ -72,12 +76,35 @@ export async function POST(req: Request) {
     .eq("is_active", true)
     .in("id", variantQuestionIds.length > 0 ? variantQuestionIds : ["__none__"]);
 
-  if (!questions || questions.length < 12) {
-    return NextResponse.json({ error: "Insufficient question pool." }, { status: 503 });
-  }
-
-  const { data: dimensions } = await sb.from("dimensions").select("id");
+  const { data: dimensions } = await sb.from("dimensions").select("id, code");
   const dimensionIds = (dimensions ?? []).map((d) => d.id);
+  const codeByDimensionId = new Map<string, string>(
+    (dimensions ?? []).map((d) => [d.id, d.code])
+  );
+
+  // Per-dimension pool validation (see /api/assessment/start for rationale).
+  const availableQuestions = (questions ?? []).map((q) => ({
+    id: q.id,
+    dimensionId: q.dimension_id,
+    difficulty: q.difficulty,
+  }));
+
+  const coveredDimensionIds = new Set(availableQuestions.map((q) => q.dimensionId));
+  const missingDimensions = dimensionIds
+    .filter((id) => !coveredDimensionIds.has(id))
+    .map((id) => codeByDimensionId.get(id) ?? id);
+
+  if (availableQuestions.length < REQUIRED_DIMENSION_COUNT || missingDimensions.length > 0) {
+    return NextResponse.json(
+      {
+        error: "Insufficient question pool for the requested locale.",
+        code: "INSUFFICIENT_POOL",
+        locale,
+        ...(missingDimensions.length > 0 ? { missingDimensions } : {}),
+      },
+      { status: 503 }
+    );
+  }
 
   const { data: session, error: sessionErr } = await sb
     .from("assessment_sessions")
@@ -90,11 +117,26 @@ export async function POST(req: Request) {
   }
   const sessionId = session.id;
 
-  const assembled = assembleSession(
-    questions.map((q) => ({ id: q.id, dimensionId: q.dimension_id, difficulty: q.difficulty })),
-    dimensionIds,
-    sessionId
-  );
+  let assembled;
+  try {
+    assembled = assembleSession(availableQuestions, dimensionIds, sessionId);
+  } catch (err) {
+    if (err instanceof IncompleteCoverageError) {
+      await sb.from("assessment_sessions").delete().eq("id", sessionId);
+      return NextResponse.json(
+        {
+          error: "Insufficient question pool for the requested locale.",
+          code: "INSUFFICIENT_POOL",
+          locale,
+          missingDimensions: err.missingDimensionIds.map(
+            (id) => codeByDimensionId.get(id) ?? id
+          ),
+        },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
 
   const sessionQuestionRows = assembled.map((aq) => ({
     session_id: sessionId, question_id: aq.questionId, position: aq.position, type: aq.type,

@@ -7,11 +7,17 @@ import { classifyTiers } from "@/lib/assessment/tier-classifier";
 import { buildReportPrompt } from "@/lib/ai/prompts/report";
 import { reportNarrativeSchema } from "@/lib/ai/schemas/report";
 import { MODEL } from "@/lib/ai/client";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success: withinLimit } = await checkRateLimit(`score:${clerkId}`, 5, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { sessionId } = await req.json();
@@ -102,7 +108,7 @@ export async function POST(req: Request) {
     });
     if (result.output) narrative = result.output;
   } catch (e) {
-    console.error("Report narrative failed:", e);
+    console.error("Report narrative failed", { sessionId, err: e });
   }
 
   // Compute integrity

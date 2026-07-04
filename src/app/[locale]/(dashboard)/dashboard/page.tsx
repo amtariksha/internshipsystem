@@ -1,11 +1,20 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { redirect } from "@/lib/i18n/navigation";
 import { getSupabase } from "@/lib/db/supabase";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function DashboardPage({ params }: DashboardPageProps) {
+  const { locale } = await params;
+
   const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  if (!user) {
+    redirect({ href: "/sign-in", locale });
+    return null;
+  }
 
   const sb = getSupabase();
   const { data: profile } = await sb.rpc("get_user_profile", {

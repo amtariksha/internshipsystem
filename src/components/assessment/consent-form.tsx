@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +28,7 @@ export function ConsentForm({
   onBegin,
   isLoading,
 }: ConsentFormProps) {
+  const t = useTranslations("assessment.start");
   const [accepted, setAccepted] = useState(false);
 
   return (
@@ -62,7 +64,7 @@ export function ConsentForm({
         </div>
 
         <Button onClick={onBegin} disabled={!accepted || isLoading} className="w-full">
-          {isLoading ? "Starting..." : beginLabel}
+          {isLoading ? t("starting") : beginLabel}
         </Button>
       </CardContent>
     </Card>

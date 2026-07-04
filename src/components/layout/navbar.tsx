@@ -23,7 +23,7 @@ export function Navbar() {
   const navLinks = [
     ...(isSignedIn
       ? [
-          { href: "/" as const, label: t("dashboard") },
+          { href: "/dashboard" as const, label: t("dashboard") },
           { href: "/start" as const, label: t("assessment") },
         ]
       : []),

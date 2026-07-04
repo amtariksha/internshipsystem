@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { getSupabase } from "@/lib/db/supabase";
 import { computeResponseConfidence } from "@/lib/assessment/confidence";
+import { runLlmFingerprint } from "@/lib/assessment/fingerprint";
 import { buildFollowUpPrompt } from "@/lib/ai/prompts/follow-up";
 import { buildScoringPrompt } from "@/lib/ai/prompts/scoring";
 import { freeTextScoringSchema } from "@/lib/ai/schemas/scoring";
-import { llmFingerprintSchema } from "@/lib/ai/schemas/fingerprint";
 import { MODEL } from "@/lib/ai/client";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { assessmentRespondSchema } from "@/lib/validation/api-schemas";
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -15,11 +17,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const { success: withinLimit } = await checkRateLimit(`resp:${clerkId}`, 20, 60);
+  if (!withinLimit) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const rawBody = await req.json();
+  const parsed = assessmentRespondSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
   const {
     sessionId, sessionQuestionId, selectedOption, freeText,
-    startedAt, completedAt, tabSwitchDelta = 0, copyPasteDelta = 0,
-  } = body;
+    startedAt, completedAt, tabSwitchDelta, copyPasteDelta,
+  } = parsed.data;
 
   const sb = getSupabase();
 
@@ -59,6 +73,7 @@ export async function POST(req: Request) {
   let sjtScore: number | null = null;
   let aiAnalysis: object | null = null;
   let aiScore: number | null = null;
+  let aiScoringFailed = false;
 
   const isNoneOfAbove = sq.type === "SJT" && selectedOption === 0 && freeText;
 
@@ -104,9 +119,11 @@ export async function POST(req: Request) {
         // For "none of the above", use AI score as the SJT score (normalized to 1-5 scale)
         sjtScore = Math.max(1, Math.min(5, aiScore));
       }
-    } catch {
+    } catch (err) {
+      console.error("[assessment/respond] AI scoring failed", { sessionId, sessionQuestionId, err });
       // Fallback: neutral score when AI scoring fails
       sjtScore = 2.5;
+      aiScoringFailed = true;
     }
   } else if (sq.type === "AI_FOLLOWUP" && freeText) {
     const { data: variant } = await sb
@@ -133,29 +150,18 @@ export async function POST(req: Request) {
         aiAnalysis = scoringResult.output;
         aiScore = scoringResult.output.score;
       }
-    } catch {
+    } catch (err) {
+      console.error("[assessment/respond] AI scoring failed", { sessionId, sessionQuestionId, err });
       aiScore = 2.5;
+      aiScoringFailed = true;
     }
 
     // P1b: LLM Fingerprint check on free-text responses
     if (freeText && freeText.length > 30) {
-      try {
-        const fpResult = await generateText({
-          model: MODEL,
-          output: Output.object({ schema: llmFingerprintSchema }),
-          prompt: `Analyze this free-text response for signs of AI generation. Check for: hedging language, unnaturally perfect structure, vocabulary inflation, absence of personality, length inflation, generic platitudes.
-
-Response language: ${locale === "hi" ? "Hindi" : "English"}
-Response: "${freeText}"
-
-Provide your analysis as structured output.`,
-        });
-        if (fpResult.output?.isLikelyAI && fpResult.output.confidence > 0.7) {
-          // Penalize confidence for likely AI-generated responses
-          aiAnalysis = { ...((aiAnalysis ?? {}) as Record<string, unknown>), llmFingerprint: fpResult.output };
-        }
-      } catch {
-        // Non-critical — skip fingerprinting
+      const fingerprint = await runLlmFingerprint({ freeText, locale });
+      if (fingerprint?.isLikelyAI && fingerprint.confidence > 0.7) {
+        // Penalize confidence for likely AI-generated responses
+        aiAnalysis = { ...((aiAnalysis ?? {}) as Record<string, unknown>), llmFingerprint: fingerprint };
       }
     }
   }
@@ -178,7 +184,7 @@ Provide your analysis as structured output.`,
   }
 
   // Save response
-  await sb.from("responses").insert({
+  const { error: insertErr } = await sb.from("responses").insert({
     session_id: sessionId,
     session_question_id: sessionQuestionId,
     selected_option: selectedOption ?? null,
@@ -192,6 +198,18 @@ Provide your analysis as structured output.`,
     confidence,
   });
 
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      // Unique-constraint conflict — response already submitted for this question.
+      return NextResponse.json(
+        { error: "Response already submitted", duplicate: true },
+        { status: 409 }
+      );
+    }
+    console.error("[assessment/respond] response insert failed", { sessionId, sessionQuestionId, insertErr });
+    return NextResponse.json({ error: "Failed to save response" }, { status: 500 });
+  }
+
   // Get next question
   const nextPos = sq.position + 1;
   const { data: nextRows } = await sb.rpc("get_next_session_question", {
@@ -204,7 +222,7 @@ Provide your analysis as structured output.`,
       .from("assessment_sessions")
       .update({ status: "COMPLETED", completed_at: new Date().toISOString() })
       .eq("id", sessionId);
-    return NextResponse.json({ complete: true, sessionId });
+    return NextResponse.json({ complete: true, sessionId, aiScoringFailed });
   }
 
   const next = nextRows[0];
@@ -217,20 +235,29 @@ Provide your analysis as structured output.`,
       .eq("locale", locale)
       .single();
 
-    const { data: optText } = selectedOption ? await sb
-      .from("question_options")
-      .select("text")
-      .eq("question_id", next.question_id)
-      .eq("position", selectedOption)
-      .eq("locale", locale)
-      .single() : { data: null };
+    // Resolve the text describing the user's choice for the follow-up prompt.
+    // selectedOption === 0 is "None of the above" (falsy but valid) — use their
+    // free text. selectedOption > 0 looks up the chosen option's text.
+    let selectedOptionText = "their choice";
+    if (selectedOption === 0) {
+      selectedOptionText = `[User chose 'None of the above' and wrote: ${freeText ?? ""}]`;
+    } else if (selectedOption != null && selectedOption > 0) {
+      const { data: optText } = await sb
+        .from("question_options")
+        .select("text")
+        .eq("question_id", next.question_id)
+        .eq("position", selectedOption)
+        .eq("locale", locale)
+        .single();
+      selectedOptionText = optText?.text ?? "their choice";
+    }
 
     try {
       const followUp = await generateText({
         model: MODEL,
         prompt: buildFollowUpPrompt({
           scenario: variant?.scenario ?? "",
-          selectedOptionText: optText?.text ?? "their choice",
+          selectedOptionText,
           dimensionName: next.dim_name,
           dimensionDescription: next.dim_desc,
           locale,
@@ -245,6 +272,7 @@ Provide your analysis as structured output.`,
       return NextResponse.json({
         complete: false,
         currentPosition: nextPos,
+        aiScoringFailed,
         question: { id: next.sq_id, type: "AI_FOLLOWUP", aiPrompt: followUp.text, dimensionName: next.dim_name, timeGuideSeconds: 120 },
       });
     } catch {
@@ -263,9 +291,9 @@ Provide your analysis as structured output.`,
           .from("assessment_sessions")
           .update({ status: "COMPLETED", completed_at: new Date().toISOString() })
           .eq("id", sessionId);
-        return NextResponse.json({ complete: true, sessionId });
+        return NextResponse.json({ complete: true, sessionId, aiScoringFailed });
       }
-      return NextResponse.json({ complete: false, currentPosition: fallback[0].position, question: { id: fallback[0].id, type: "SJT", scenario: "", prompt: "", options: [], dimensionName: "", timeGuideSeconds: 90 } });
+      return NextResponse.json({ complete: false, currentPosition: fallback[0].position, aiScoringFailed, question: { id: fallback[0].id, type: "SJT", scenario: "", prompt: "", options: [], dimensionName: "", timeGuideSeconds: 90 } });
     }
   }
 
@@ -287,6 +315,7 @@ Provide your analysis as structured output.`,
   return NextResponse.json({
     complete: false,
     currentPosition: nextPos,
+    aiScoringFailed,
     question: {
       id: next.sq_id, type: "SJT",
       scenario: nextVariant?.scenario ?? "", prompt: nextVariant?.prompt ?? "",

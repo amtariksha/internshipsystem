@@ -1,3 +1,11 @@
+const LOCALE_REPORT_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
+  en: "Write the report in English. Use clear, encouraging but honest language.",
+  hi: "Write the entire report in Hindi (Devanagari script). Use formal but approachable language suitable for a young Indian audience.",
+  te: "Write the entire report in Telugu (Telugu script). Use formal but approachable language suitable for a young Indian audience.",
+  ta: "Write the entire report in Tamil (Tamil script). Use formal but approachable language suitable for a young Indian audience.",
+  kn: "Write the entire report in Kannada (Kannada script). Use formal but approachable language suitable for a young Indian audience.",
+};
+
 export function buildReportPrompt(params: {
   dimensionScores: { name: string; normalized: number; confidence: number }[];
   compositeScore: number;
@@ -9,9 +17,9 @@ export function buildReportPrompt(params: {
   locale: string;
   userAge?: number;
 }): string {
-  const languageInstruction = params.locale === "hi"
-    ? "Write the entire report in Hindi (Devanagari script). Use formal but approachable language suitable for a young Indian audience."
-    : "Write the report in English. Use clear, encouraging but honest language.";
+  const languageInstruction =
+    LOCALE_REPORT_LANGUAGE_INSTRUCTIONS[params.locale] ??
+    LOCALE_REPORT_LANGUAGE_INSTRUCTIONS.en;
 
   const scoresTable = params.dimensionScores
     .map((d) => `- ${d.name}: ${d.normalized}/100 (confidence: ${Math.round(d.confidence * 100)}%)`)

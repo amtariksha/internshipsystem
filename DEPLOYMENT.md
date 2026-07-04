@@ -71,7 +71,7 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 1. Go to [Clerk Dashboard](https://dashboard.clerk.com) → Webhooks → **Add Endpoint**
 2. URL: `https://your-domain.vercel.app/api/webhooks/clerk`
 3. Events: `user.created`, `user.updated`
-4. Copy the signing secret → add as `CLERK_WEBHOOK_SECRET` in Vercel env vars
+4. Copy the signing secret → add as `CLERK_WEBHOOK_SIGNING_SECRET` in Vercel env vars (found under the webhook endpoint's settings in the Clerk Dashboard)
 
 ### 2d. Enable AI Gateway
 
@@ -166,7 +166,7 @@ Go to **Vercel Dashboard → Deployments → click latest** → check:
 | `UPSTASH_REDIS_REST_TOKEN` | Auto (Vercel Storage) | Yes | Redis auth token |
 | `CLERK_SECRET_KEY` | Auto (Clerk Integration) | Yes | Server-only |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auto (Clerk Integration) | Yes | Client-facing |
-| `CLERK_WEBHOOK_SECRET` | Clerk Dashboard → Webhooks | Yes | Webhook signature validation |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Clerk Dashboard → Webhooks → endpoint settings | Yes | Webhook signature validation |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Manual | Yes | Set to `/sign-in` |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Manual | Yes | Set to `/sign-up` |
 
@@ -186,7 +186,7 @@ UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-redis-token
 CLERK_SECRET_KEY=sk_live_xxxxx
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxxxx
-CLERK_WEBHOOK_SECRET=whsec_xxxxx
+CLERK_WEBHOOK_SIGNING_SECRET=whsec_xxxxx
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 EOF
