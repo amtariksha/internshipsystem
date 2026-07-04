@@ -16,6 +16,9 @@
 --   is still restricted to the caller's own reports.
 
 DROP POLICY IF EXISTS "reports_read_by_slug" ON reports;
+-- Idempotent: drop the owner policy too so this migration is safe to re-run even
+-- after schema.sql has already created reports_read_owner.
+DROP POLICY IF EXISTS "reports_read_owner" ON reports;
 
 -- A report is readable only by the user who owns the assessment session it
 -- was generated from:
