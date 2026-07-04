@@ -671,8 +671,20 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'dimensions_read_all') THEN
     CREATE POLICY "dimensions_read_all" ON dimensions FOR SELECT USING (true);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reports_read_by_slug') THEN
-    CREATE POLICY "reports_read_by_slug" ON reports FOR SELECT USING (true);
+  -- Reports are readable only by the owner of the assessment session they were
+  -- generated from (reports.session_id -> assessment_sessions.user_id ->
+  -- users.clerk_id = JWT sub). See migration 001_reports_rls.sql. Service role
+  -- bypasses RLS, so the primary check is app-level, but this keeps any future
+  -- JWT-authenticated browser client scoped to its own reports.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reports_read_owner') THEN
+    CREATE POLICY "reports_read_owner" ON reports FOR SELECT USING (
+      EXISTS (
+        SELECT 1 FROM assessment_sessions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.id = reports.session_id
+          AND u.clerk_id = auth.jwt() ->> 'sub'
+      )
+    );
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'domain_questions_read_all') THEN
     CREATE POLICY "domain_questions_read_all" ON domain_questions FOR SELECT USING (true);
