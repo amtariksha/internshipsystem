@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   const sb = getSupabase();
 
   // Step 1: Upsert basic user info
-  await sb.rpc("upsert_user_from_clerk", {
+  const { error: upsertError } = await sb.rpc("upsert_user_from_clerk", {
     p_clerk_id: clerkId,
     p_email: email,
     p_name: name,
@@ -91,9 +91,16 @@ export async function POST(req: Request) {
     p_locale: preferredLocale,
     p_age_verified: ageVerified,
   });
+  if (upsertError) {
+    console.error("[onboarding] upsert_user_from_clerk failed:", upsertError);
+    return NextResponse.json(
+      { error: "Failed to create user", detail: upsertError.message },
+      { status: 500 },
+    );
+  }
 
   // Step 2: Update educational profile
-  await sb.rpc("update_user_education", {
+  const { error: eduError } = await sb.rpc("update_user_education", {
     p_clerk_id: clerkId,
     p_educational_stage: educationalStage,
     p_field_of_study: fieldOfStudy,
@@ -102,6 +109,13 @@ export async function POST(req: Request) {
     p_backlog_count: backlogCount,
     p_employment_status: employmentStatus,
   });
+  if (eduError) {
+    console.error("[onboarding] update_user_education failed:", eduError);
+    return NextResponse.json(
+      { error: "Failed to update education profile", detail: eduError.message },
+      { status: 500 },
+    );
+  }
 
   // Step 3: Resolve organization for org roles.
   let organizationId: string | null = null;
@@ -172,8 +186,9 @@ export async function POST(req: Request) {
     .eq("clerk_id", clerkId);
 
   if (updateError) {
+    console.error("[onboarding] users update (role/org/guardian) failed:", updateError);
     return NextResponse.json(
-      { error: "Failed to update user profile" },
+      { error: "Failed to update user profile", detail: updateError.message },
       { status: 500 },
     );
   }
