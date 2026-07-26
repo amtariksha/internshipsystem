@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,11 +61,22 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Step 1
   const [name, setName] = useState(initialName);
   const [dob, setDob] = useState("");
   const [locale, setLocale] = useState("en");
+  const [nameTouched, setNameTouched] = useState(false);
+
+  // Clerk populates the user asynchronously, so `initialName` is often "" on
+  // the first render. useState only reads its argument once, so without this
+  // the name field would stay empty forever — leaving step 1's button disabled.
+  useEffect(() => {
+    if (!nameTouched && initialName && !name) {
+      setName(initialName);
+    }
+  }, [initialName, nameTouched, name]);
 
   // Step 2 — role
   const [role, setRole] = useState<OnboardingRole | "">("");
@@ -170,6 +181,7 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
 
   async function submitData() {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const resolvedRole = (role || "STUDENT") as OnboardingRole;
       const resolvedStage: EducationalStage = isStudent
@@ -197,6 +209,10 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
         backlogCount: isStudent ? backlogCount : 0,
         employmentStatus: isStudent ? employmentStatus || null : null,
       });
+    } catch (err) {
+      // Without this the button would silently re-enable and appear broken.
+      console.error("[onboarding] submit failed:", err);
+      setSubmitError(err instanceof Error ? err.message : t("submitError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -244,7 +260,10 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
                 <Input
                   id="name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setNameTouched(true);
+                    setName(e.target.value);
+                  }}
                   required
                 />
               </div>
@@ -523,6 +542,15 @@ export function OnboardingWizard({ initialName, onComplete }: OnboardingWizardPr
                 </Select>
               </div>
             </div>
+          )}
+
+          {submitError && (
+            <p
+              role="alert"
+              className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              {submitError}
+            </p>
           )}
 
           {/* ── Navigation Buttons ── */}

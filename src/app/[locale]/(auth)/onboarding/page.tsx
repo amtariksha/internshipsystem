@@ -6,7 +6,7 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import type { OnboardingData } from "@/components/onboarding/onboarding-wizard";
 
 export default function OnboardingPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const router = useRouter();
 
   async function handleComplete(data: OnboardingData) {
@@ -19,7 +19,18 @@ export default function OnboardingPage() {
       }),
     });
 
-    if (response.ok) {
+    // Surface server-side failures — the wizard catches this and shows the
+    // message. Previously a non-OK response was ignored entirely, so the
+    // button silently did nothing.
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.detail || body?.error || `Request failed (${response.status})`);
+    }
+
+    // Clerk metadata is a convenience mirror of what we just persisted in the
+    // database. If it fails, onboarding has still succeeded — never block the
+    // redirect on it.
+    try {
       await user?.update({
         unsafeMetadata: {
           onboarded: true,
@@ -29,8 +40,17 @@ export default function OnboardingPage() {
           fieldOfStudy: data.fieldOfStudy,
         },
       });
-      router.push("/");
+    } catch (err) {
+      console.error("[onboarding] Clerk metadata update failed (non-fatal):", err);
     }
+
+    router.push("/dashboard");
+  }
+
+  // Clerk resolves `user` asynchronously; rendering before it loads would seed
+  // the wizard with an empty name.
+  if (!isLoaded) {
+    return <div className="flex min-h-screen items-center justify-center p-4" />;
   }
 
   return (

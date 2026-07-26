@@ -246,7 +246,8 @@
     },
     "complete": "Complete Setup",
     "next": "Next",
-    "back": "Back"
+    "back": "Back",
+    "submitError": "Something went wrong while saving your details. Please try again."
   },
   "domains": {
     "computer_science": "Computer Science",
