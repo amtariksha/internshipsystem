@@ -41,6 +41,7 @@ export default function AssessmentSessionPage() {
   const [lastSelectedOption, setLastSelectedOption] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isAbandoning, setIsAbandoning] = useState(false);
 
   const timer = useTimer(question?.timeGuideSeconds ?? 90);
 
@@ -165,15 +166,37 @@ export default function AssessmentSessionPage() {
     [question, sessionId, questionStartTime, getDeltas, router, lastSelectedOption, t]
   );
 
+  async function abandonSession() {
+    setIsAbandoning(true);
+    try {
+      await fetch(`/api/assessment/session/${sessionId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("[assessment] abandon failed", err);
+    } finally {
+      // Navigate regardless: if the abandon failed the start page surfaces the
+      // 409, which is still better than being stranded on this screen.
+      setIsAbandoning(false);
+      router.push("/start");
+    }
+  }
+
   if (loadError) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
         <p role="alert" className="text-sm text-destructive">
           {loadError}
         </p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          {t("retry")}
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            {t("retry")}
+          </Button>
+          {/* Escape hatch: /api/assessment/start refuses with 409 while any
+              IN_PROGRESS session exists, so without this a session the user
+              cannot load locks them out of the assessment entirely. */}
+          <Button variant="outline" onClick={abandonSession} disabled={isAbandoning}>
+            {isAbandoning ? t("startingOver") : t("startOver")}
+          </Button>
+        </div>
       </div>
     );
   }

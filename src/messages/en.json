@@ -93,7 +93,9 @@
       "loading": "Loading assessment...",
       "loadFailed": "Could not load this assessment. It may have expired or belong to another account.",
       "retry": "Retry",
-      "submitFailed": "Could not save your answer. Please try again."
+      "submitFailed": "Could not save your answer. Please try again.",
+      "startOver": "Start over",
+      "startingOver": "Starting over..."
     },
     "complete": {
       "title": "Assessment Complete!",

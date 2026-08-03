@@ -11,6 +11,69 @@ import { getSupabase, describeDbError } from "@/lib/db/supabase";
  * spun on "Loading assessment" forever. This endpoint lets the client recover
  * its position from the server instead.
  */
+/**
+ * Abandon an in-progress assessment.
+ *
+ * /api/assessment/start refuses with 409 while any IN_PROGRESS session exists,
+ * so a session the user cannot finish (for any reason) locked them out of the
+ * assessment permanently — the only exit was completing it. This gives them a
+ * way to discard it and start fresh. The row is marked ABANDONED rather than
+ * deleted so partial responses stay available for analysis.
+ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: sessionId } = await params;
+  const sb = getSupabase();
+
+  const { data: user } = await sb
+    .from("users")
+    .select("id")
+    .eq("clerk_id", clerkId)
+    .maybeSingle();
+  if (!user) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  const { data: session } = await sb
+    .from("assessment_sessions")
+    .select("id, user_id, status")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (!session || session.user_id !== user.id) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  // Never let a finished assessment be discarded — its report depends on it.
+  if (session.status === "COMPLETED") {
+    return NextResponse.json(
+      { error: "Completed sessions cannot be abandoned" },
+      { status: 409 },
+    );
+  }
+
+  const { error: updateErr } = await sb
+    .from("assessment_sessions")
+    .update({ status: "ABANDONED" })
+    .eq("id", sessionId);
+
+  if (updateErr) {
+    console.error("[assessment/session] abandon failed", { sessionId, updateErr });
+    return NextResponse.json(
+      { error: "Failed to abandon session", detail: describeDbError(updateErr) },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ abandoned: true, sessionId });
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
