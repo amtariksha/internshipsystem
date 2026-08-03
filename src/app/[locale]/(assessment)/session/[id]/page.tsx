@@ -212,7 +212,7 @@ export default function AssessmentSessionPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header with progress and timer */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-6">
         <ProgressBar
           current={currentPosition}
           total={totalQuestions}

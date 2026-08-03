@@ -96,12 +96,22 @@ export function assembleSession(
     pool.splice(idx, 1); // Remove from pool so we don't double-pick
   }
 
-  // Phase 1.5 (Consistency Traps): Ensure at least 2 SJTs per dimension for cross-checking
+  // Phase 1.5 (Consistency Traps): add a 2nd SJT per dimension for
+  // cross-checking, but never past MAX_SJT_QUESTIONS.
+  //
+  // Phase 1 already places one SJT per dimension (12), so giving every
+  // dimension a second one would need 24 — well over the configured max of 15.
+  // Previously this loop ignored the cap entirely and Phase 2's
+  // `MAX_SJT_QUESTIONS - selectedSjts.length` went negative, so the cap was
+  // silently never applied: sessions were assembled with 24 SJTs + 24
+  // follow-ups + 1 rapid-fire = 49 questions, roughly triple the intended
+  // length. Traps now fill whatever headroom the cap leaves.
   const dimCounts = new Map<string, number>();
   for (const sjt of selectedSjts) {
     dimCounts.set(sjt.dimensionId, (dimCounts.get(sjt.dimensionId) ?? 0) + 1);
   }
   for (const dimId of dimensionIds) {
+    if (selectedSjts.length >= ASSESSMENT_CONFIG.MAX_SJT_QUESTIONS) break;
     if ((dimCounts.get(dimId) ?? 0) < 2) {
       const pool = byDimension.get(dimId) ?? [];
       if (pool.length > 0) {
@@ -114,7 +124,10 @@ export function assembleSession(
   }
 
   // Phase 2: Fill remaining slots up to max
-  const remaining = ASSESSMENT_CONFIG.MAX_SJT_QUESTIONS - selectedSjts.length;
+  const remaining = Math.max(
+    0,
+    ASSESSMENT_CONFIG.MAX_SJT_QUESTIONS - selectedSjts.length,
+  );
   const allRemaining: QuestionForAssembly[] = [];
   for (const pool of byDimension.values()) {
     allRemaining.push(...pool);
