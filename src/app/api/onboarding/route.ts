@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabase } from "@/lib/db/supabase";
+import { getSupabase, describeDbError } from "@/lib/db/supabase";
 import { sendGuardianConsentEmail } from "@/lib/email";
 
 const onboardingSchema = z.object({
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
   if (upsertError) {
     console.error("[onboarding] upsert_user_from_clerk failed:", upsertError);
     return NextResponse.json(
-      { error: "Failed to create user", detail: upsertError.message },
+      { error: "Failed to create user", detail: describeDbError(upsertError) },
       { status: 500 },
     );
   }
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
   if (eduError) {
     console.error("[onboarding] update_user_education failed:", eduError);
     return NextResponse.json(
-      { error: "Failed to update education profile", detail: eduError.message },
+      { error: "Failed to update education profile", detail: describeDbError(eduError) },
       { status: 500 },
     );
   }
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
   if (updateError) {
     console.error("[onboarding] users update (role/org/guardian) failed:", updateError);
     return NextResponse.json(
-      { error: "Failed to update user profile", detail: updateError.message },
+      { error: "Failed to update user profile", detail: describeDbError(updateError) },
       { status: 500 },
     );
   }
