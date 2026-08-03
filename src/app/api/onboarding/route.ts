@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabase, describeDbError } from "@/lib/db/supabase";
 import { sendGuardianConsentEmail } from "@/lib/email";
+import { resolveInternalBaseUrl } from "@/lib/utils/base-url";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(1),
@@ -28,19 +29,11 @@ const ORG_TYPE_BY_ROLE: Record<"COLLEGE_ADMIN" | "EMPLOYER", "COLLEGE" | "EMPLOY
   EMPLOYER: "EMPLOYER",
 };
 
-function resolveOrigin(req: Request): string {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl) return envUrl.replace(/\/$/, "");
-
-  const vercelUrl = process.env.VERCEL_URL;
-  if (vercelUrl) return `https://${vercelUrl}`;
-
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (host) return `${proto}://${host}`;
-
-  return new URL(req.url).origin;
-}
+// Shared with the astro routes. Importantly this never falls back to
+// VERCEL_URL ahead of the request host: a guardian-consent link built from the
+// per-deployment hostname sits behind Vercel Deployment Protection and the
+// guardian (who has no Vercel account) could not open it.
+const resolveOrigin = resolveInternalBaseUrl;
 
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
