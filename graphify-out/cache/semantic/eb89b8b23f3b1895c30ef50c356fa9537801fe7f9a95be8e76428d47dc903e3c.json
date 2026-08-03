@@ -1,1 +1,0 @@
-{"nodes": [{"id": "004_report_locales_migration", "label": "Migration 004: Report Locales (report_narratives)", "file_type": "code", "source_file": "supabase/migrations/004_report_locales.sql", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

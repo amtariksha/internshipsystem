@@ -1,1 +1,0 @@
-{"nodes": [{"id": "proxy_clerk_middleware", "label": "Proxy Middleware (Clerk auth + i18n)", "file_type": "code", "source_file": "src/proxy.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

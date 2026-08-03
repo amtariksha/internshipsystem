@@ -46,3 +46,6 @@ next-env.d.ts
 # Python
 __pycache__/
 *.pyc
+
+# graphify generated artifacts (regenerate with: graphify update .)
+graphify-out/
