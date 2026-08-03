@@ -89,7 +89,11 @@
       "submitting": "Submitting...",
       "generating": "Generating next question...",
       "freeTextPlaceholder": "Share your thoughts here...",
-      "pasteBlocked": "Pasting is disabled to keep your responses authentic."
+      "pasteBlocked": "Pasting is disabled to keep your responses authentic.",
+      "loading": "Loading assessment...",
+      "loadFailed": "Could not load this assessment. It may have expired or belong to another account.",
+      "retry": "Retry",
+      "submitFailed": "Could not save your answer. Please try again."
     },
     "complete": {
       "title": "Assessment Complete!",
