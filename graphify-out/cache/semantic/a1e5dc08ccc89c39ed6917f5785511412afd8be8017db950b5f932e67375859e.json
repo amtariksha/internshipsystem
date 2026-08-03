@@ -1,0 +1,1 @@
+{"nodes": [{"id": "001_reports_rls_migration", "label": "Migration 001: Reports RLS Policy", "file_type": "code", "source_file": "supabase/migrations/001_reports_rls.sql", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

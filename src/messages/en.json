@@ -131,7 +131,8 @@
       "systemLabel": "Numerology System",
       "systemChaldean": "Chaldean (traditional)",
       "systemPythagorean": "Pythagorean (Western)",
-      "exploreFull": "Explore Full Kundli Analysis →"
+      "exploreFull": "Explore Full Kundli Analysis →",
+      "genericError": "Could not generate your analysis. Please try again."
     },
     "full": {
       "title": "Full Kundli Analysis",
@@ -146,7 +147,8 @@
       "selectPlaceError": "Please search for and select your birth place.",
       "genericError": "Could not generate the Kundli. Please try again.",
       "generating": "Generating Kundli...",
-      "backToQuick": "← Back to Quick Analysis"
+      "backToQuick": "← Back to Quick Analysis",
+      "noResults": "No matching place found. Try the official spelling, a nearby larger town, or the district name."
     },
     "results": {
       "destinyNumber": "Destiny Number",
@@ -162,7 +164,8 @@
       "birthNakshatra": "Birth Nakshatra",
       "planetaryPositions": "Planetary Positions",
       "house": "House"
-    }
+    },
+    "signInRequired": "Please sign in to get your analysis."
   },
   "dashboard": {
     "welcome": "Welcome, {name}",

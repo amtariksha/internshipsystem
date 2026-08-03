@@ -24,7 +24,16 @@ export default function OnboardingPage() {
     // button silently did nothing.
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      throw new Error(body?.detail || body?.error || `Request failed (${response.status})`);
+      // The route returns `detail` for DB errors and `details` (zod flatten)
+      // for validation failures — read both so field-level errors reach the UI.
+      const fieldErrors = body?.details?.fieldErrors
+        ? Object.entries(body.details.fieldErrors)
+            .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+            .join("; ")
+        : null;
+      throw new Error(
+        body?.detail || fieldErrors || body?.error || `Request failed (${response.status})`,
+      );
     }
 
     // Clerk metadata is a convenience mirror of what we just persisted in the

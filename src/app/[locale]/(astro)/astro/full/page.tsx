@@ -61,7 +61,10 @@ interface KundliResult {
   topCareers: CareerSuggestion[];
 }
 
-const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
+// Proxied server-side (src/app/api/geocode/route.ts) so colloquial and rural
+// place names fall back from Open-Meteo to Nominatim — "Kalburgi" returns
+// nothing from Open-Meteo but resolves correctly via the fallback.
+const GEOCODE_URL = "/api/geocode";
 const PLANET_ORDER = [
   "Sun",
   "Moon",
@@ -88,6 +91,7 @@ export default function AstroFullPage() {
   const [placeResults, setPlaceResults] = useState<GeoResult[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<GeoResult | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [placeNotFound, setPlaceNotFound] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,19 +104,23 @@ export default function AstroFullPage() {
       return;
     }
     setIsGeocoding(true);
+    setPlaceNotFound(false);
     try {
-      const url = `${GEOCODE_URL}?name=${encodeURIComponent(
-        query
-      )}&count=5&language=en&format=json`;
-      const res = await fetch(url);
+      const res = await fetch(`${GEOCODE_URL}?q=${encodeURIComponent(query)}`);
       if (!res.ok) {
         setPlaceResults([]);
+        setPlaceNotFound(true);
         return;
       }
       const data = await res.json();
-      setPlaceResults(Array.isArray(data.results) ? data.results : []);
+      const results = Array.isArray(data.results) ? data.results : [];
+      setPlaceResults(results);
+      // Previously an empty list rendered nothing at all, so an unmatched place
+      // looked identical to a broken search.
+      setPlaceNotFound(results.length === 0);
     } catch {
       setPlaceResults([]);
+      setPlaceNotFound(true);
     } finally {
       setIsGeocoding(false);
     }
@@ -121,12 +129,14 @@ export default function AstroFullPage() {
   function handlePlaceInput(value: string) {
     setPlaceQuery(value);
     setSelectedPlace(null);
+    setPlaceNotFound(false);
   }
 
   function selectPlace(place: GeoResult) {
     setSelectedPlace(place);
     setPlaceQuery(formatPlace(place));
     setPlaceResults([]);
+    setPlaceNotFound(false);
   }
 
   async function handleAnalyze(e: React.FormEvent) {
@@ -153,6 +163,13 @@ export default function AstroFullPage() {
         }),
       });
       if (!res.ok) {
+        // The astro pages are public but the API is auth-gated, so a signed-out
+        // visitor can reach this form. Surface a sign-in prompt rather than a
+        // raw "Unauthorized".
+        if (res.status === 401) {
+          setError(t("signInRequired"));
+          return;
+        }
         const body = await res.json().catch(() => ({}));
         setError(body.error || t("full.genericError"));
         return;
@@ -255,6 +272,10 @@ export default function AstroFullPage() {
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {placeNotFound && !isGeocoding && (
+                    <p className="text-xs text-amber-500">{t("full.noResults")}</p>
                   )}
 
                   {selectedPlace && (

@@ -36,10 +36,12 @@ export default function AstroQuickPage() {
   const [system, setSystem] = useState<NumerologySystem>("chaldean");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AstroResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/astro/quick", {
         method: "POST",
@@ -48,7 +50,19 @@ export default function AstroQuickPage() {
       });
       if (res.ok) {
         setResult(await res.json());
+        return;
       }
+      // This page is public but /api/astro/quick requires a Clerk session, so a
+      // signed-out visitor gets a 401. Previously that was swallowed entirely
+      // and the button appeared to do nothing.
+      if (res.status === 401) {
+        setError(t("signInRequired"));
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || t("quick.genericError"));
+    } catch {
+      setError(t("quick.genericError"));
     } finally {
       setIsLoading(false);
     }
@@ -110,6 +124,15 @@ export default function AstroQuickPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+                  >
+                    {error}
+                  </p>
+                )}
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? t("quick.analyzing") : t("quick.analyze")}
                 </Button>
